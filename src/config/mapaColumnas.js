@@ -1,37 +1,192 @@
-module.exports = {
+/**
+ * Equivalencias entre las columnas del Excel OFSC
+ * y los campos utilizados por SIGOT-FTTH.
+ *
+ * Se utilizan arreglos porque OFSC puede variar
+ * ligeramente el nombre de algunas columnas.
+ */
+const mapaColumnas = {
+    /*
+     * Datos que identifican la actividad y la OT.
+     */
+    idActividadOFSC: [
+        "ID de actividad"
+    ],
 
-    codigoOT: "Orden de trabajo",
+    codigoOT: [
+        "Orden de trabajo"
+    ],
 
-    codigoServicio: "Cod_Servicio",
+    /*
+     * Datos generales del servicio.
+     */
+    codigoServicio: [
+        "Cod_Servicio"
+    ],
 
-    productoPlan: "Producto/Plan contratado",
+    productoPlan: [
+        "Producto/Plan contratado"
+    ],
 
-    // En este Excel no existe una columna llamada "Tipo de servicio"
-    tipoServicio: "Tipo de Servicio (TS1/TS2)",
+    tipoServicio: [
+        "Tipo de Servicio (TS1/TS2)"
+    ],
 
-    cliente: "Nombre",
+    tipoActividad: [
+        "Tipo de actividad"
+    ],
 
-    dni: "Documento",
+    cliente: [
+        "Nombre"
+    ],
 
-    telefono: "Teléfono",
+    dni: [
+        "Documento"
+    ],
 
-    direccion: "Dirección",
+    telefono: [
+        "Teléfono móvil",
+        "Teléfono",
+        "Teléfono de Contacto"
+    ],
 
-    distrito: "Distrito",
+    direccion: [
+        "Dirección"
+    ],
 
-    latitud: "Coordenada X",
+    distrito: [
+        "Distrito",
+        "Distrito WO"
+    ],
 
-    longitud: "Coordenada Y",
+    /*
+     * Coordenadas.
+     *
+     * En OFSC:
+     * Coordenada Y = latitud.
+     * Coordenada X = longitud.
+     */
+    latitud: [
+        "Coordenada Y"
+    ],
 
-    recursosXML: "Recursos de red",
+    longitud: [
+        "Coordenada X"
+    ],
 
-    // Este Excel no trae RFS
-    rfs: null,
+    /*
+     * Información de red.
+     */
+    recursosXML: [
+        "Recursos de red"
+    ],
 
-    fechaAgenda: "Fecha",
+    rfs: [
+        "ID Recurso de Servicio shm"
+    ],
 
-    horario: "Intervalo de tiempo",
+    /*
+     * Agenda de la actividad.
+     */
+    fechaAgenda: [
+        "Fecha"
+    ],
 
-    estadoOT: "Estado de actividad"
+    fechaActividad: [
+        "Fecha"
+    ],
 
+    horario: [
+        "Intervalo de tiempo",
+        "Ventana de servicio"
+    ],
+
+    horaInicio: [
+        "Inicio"
+    ],
+
+    horaFin: [
+        "Finalización"
+    ],
+
+    /*
+     * Estado de actividad en OFSC.
+     *
+     * estadoOT se conserva temporalmente para no
+     * afectar el código existente.
+     */
+    estadoActividad: [
+        "Estado de actividad"
+    ],
+
+    estadoOT: [
+        "Estado de actividad"
+    ],
+
+    /*
+     * Información de reagendamiento.
+     */
+    flagReagenda: [
+        "Flag reagenda"
+    ],
+
+    razonReagenda: [
+        "Razón reagenda"
+    ],
+
+    reagendamiento: [
+        "Reagendamiento"
+    ],
+
+    solicitaReagendamiento: [
+        "Solicita Reagendamiento"
+    ],
+
+    /*
+     * Motivos y resultados.
+     *
+     * OFSC tiene actualmente el encabezado
+     * "Motivo de cancelacíon", con esa escritura.
+     * También se incluye la versión corregida.
+     */
+    motivo: [
+        "Motivo"
+    ],
+
+    motivoCancelacion: [
+        "Motivo de cancelacíon",
+        "Motivo de cancelación"
+    ],
+
+    resultadoGlobal: [
+        "Resultado Global"
+    ],
+
+    resultadoActivacion: [
+        "Resultado activación"
+    ],
+
+    tipoCierre: [
+    "Tipo Cierre",
+    "Tipo de Cierre",
+    "Tipo cierre",
+    "Tipo de cierre",
+    "TIPO CIERRE",
+    "TIPO DE CIERRE"
+    ],
+
+    /*
+     * Datos de suspensión.
+     */
+    responsableSuspension: [
+        "Responsable Suspension",
+        "Responsable Suspensión"
+    ],
+
+    tipoSuspension: [
+        "Tipo Suspension",
+        "Tipo Suspensión"
+    ]
 };
+
+module.exports = mapaColumnas;

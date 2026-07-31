@@ -10,6 +10,7 @@ const tecnicosRoutes = require("./routes/tecnicoRoutes"); // ← IMPORTANTE
 const asignacionRoutes = require("./routes/asignacionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const asignacionesListadoRoutes = require("./routes/asignacionesListadoRoutes");
+const reporteRoutes = require("./routes/reporteRoutes");
 
 // Middlewares
 app.use(cors());
@@ -38,5 +39,7 @@ app.use("/api/asignaciones", asignacionRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
 app.use("/api/asignaciones", asignacionesListadoRoutes);
+
+app.use("/api/reportes", reporteRoutes);
 
 module.exports = app;
