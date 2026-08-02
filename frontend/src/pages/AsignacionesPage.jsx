@@ -186,7 +186,7 @@ function AsignacionesPage() {
         }
 
         const confirmado = window.confirm(
-            "¿Desea ejecutar la asignación automática de las órdenes sin asignar?"
+            "¿Desea ejecutar la asignación automática de las órdenes pendientes?"
         );
 
         if (!confirmado) {
@@ -279,7 +279,10 @@ function AsignacionesPage() {
                         asignacion.EstadoInternoOT,
                         asignacion.EstadoOT,
                         asignacion.EstadoActividad,
-                        asignacion.TipoAsignacion
+                        asignacion.TipoAsignacion,
+                        asignacion.UsuarioResponsable,
+                        asignacion.NombreUsuarioResponsable,
+                        asignacion.RolResponsable
                     ]
                         .map(obtenerTexto)
                         .join(" ")
@@ -382,7 +385,9 @@ function AsignacionesPage() {
         <section className="asignaciones-page">
             <header className="asignaciones-encabezado">
                 <div>
-                    <h1>Asignaciones</h1>
+                    <h1>
+                        Asignaciones
+                    </h1>
 
                     <p>
                         {puedeEjecutarAsignacion
@@ -547,7 +552,7 @@ function AsignacionesPage() {
                         <input
                             id="buscar-asignacion"
                             type="search"
-                            placeholder="OT, cliente, distrito o técnico"
+                            placeholder="OT, cliente, técnico o responsable"
                             value={busqueda}
                             onChange={(evento) =>
                                 setBusqueda(
@@ -604,8 +609,7 @@ function AsignacionesPage() {
                     asignaciones.length ===
                         0 && (
                         <div className="estado-asignaciones">
-                            No existen asignaciones
-                            registradas.
+                            No existen asignaciones registradas.
                         </div>
                     )}
 
@@ -647,6 +651,14 @@ function AsignacionesPage() {
 
                                             <th>
                                                 Actividad OFSC
+                                            </th>
+
+                                            <th>
+                                                Responsable
+                                            </th>
+
+                                            <th>
+                                                Rol
                                             </th>
 
                                             <th>
@@ -768,6 +780,28 @@ function AsignacionesPage() {
                                                         </td>
 
                                                         <td>
+                                                            <strong className="responsable-asignacion">
+                                                                {asignacion.UsuarioResponsable ||
+                                                                    "Sin responsable"}
+                                                            </strong>
+
+                                                            <small className="usuario-responsable">
+                                                                {asignacion.NombreUsuarioResponsable
+                                                                    ? `@${asignacion.NombreUsuarioResponsable}`
+                                                                    : asignacion.IdUsuario
+                                                                      ? `ID usuario: ${asignacion.IdUsuario}`
+                                                                      : "Sin usuario"}
+                                                            </small>
+                                                        </td>
+
+                                                        <td>
+                                                            <span className="badge-rol-responsable">
+                                                                {asignacion.RolResponsable ||
+                                                                    "Sin rol"}
+                                                            </span>
+                                                        </td>
+
+                                                        <td>
                                                             {formatearFechaHora(
                                                                 asignacion.FechaAsignacion
                                                             )}
@@ -778,7 +812,7 @@ function AsignacionesPage() {
                                         ) : (
                                             <tr>
                                                 <td
-                                                    colSpan="9"
+                                                    colSpan="11"
                                                     className="sin-resultados-asignaciones"
                                                 >
                                                     No se encontraron asignaciones con los filtros seleccionados.

@@ -206,7 +206,7 @@
 
 .tabla-asignaciones {
     width: 100%;
-    min-width: 1450px;
+    min-width: 1720px;
     border-collapse: collapse;
 }
 
@@ -244,6 +244,28 @@
 
 .codigo-ot-asignacion {
     color: #0b5394;
+    white-space: nowrap;
+}
+
+.responsable-asignacion {
+    display: block;
+    min-width: 150px;
+    color: #1e293b;
+}
+
+.usuario-responsable {
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.badge-rol-responsable {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 20px;
+    background: #ede9fe;
+    color: #6d28d9;
+    font-size: 11px;
+    font-weight: 700;
     white-space: nowrap;
 }
 

@@ -462,6 +462,8 @@ async function asignarOrdenesAutomaticamente(
  * - Datos principales de la OT.
  * - Técnico asignado.
  * - Actividad OFSC relacionada.
+ * - Usuario responsable.
+ * - Rol del usuario responsable.
  */
 async function obtenerAsignaciones() {
     const pool =
@@ -474,6 +476,7 @@ async function obtenerAsignaciones() {
                 A.IdOrden,
                 A.IdTecnico,
                 A.IdActividad,
+                A.IdUsuario,
                 A.FechaAsignacion,
                 A.TipoAsignacion,
 
@@ -509,7 +512,16 @@ async function obtenerAsignaciones() {
                 ACT.IdActividadOFSC,
                 ACT.EstadoActividad,
                 ACT.TipoCierre,
-                ACT.ResultadoNoRealizado
+                ACT.ResultadoNoRealizado,
+
+                U.NombreCompleto
+                    AS UsuarioResponsable,
+
+                U.Usuario
+                    AS NombreUsuarioResponsable,
+
+                R.Nombre
+                    AS RolResponsable
 
             FROM dbo.Asignaciones A
 
@@ -524,6 +536,14 @@ async function obtenerAsignaciones() {
             LEFT JOIN dbo.ActividadesOFSC ACT
                 ON ACT.IdActividad =
                     A.IdActividad
+
+            LEFT JOIN dbo.Usuarios U
+                ON U.IdUsuario =
+                    A.IdUsuario
+
+            LEFT JOIN dbo.Roles R
+                ON R.IdRol =
+                    U.IdRol
 
             ORDER BY
                 A.FechaAsignacion DESC,
