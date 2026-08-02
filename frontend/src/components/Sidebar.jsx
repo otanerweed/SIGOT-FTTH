@@ -29,6 +29,12 @@ function Sidebar() {
         "Supervisor"
     ].includes(rol);
 
+    const puedeVerMapa = [
+        "Administrador",
+        "Coordinador",
+        "Supervisor"
+    ].includes(rol);
+
     const puedeGestionarUsuarios =
         rol === "Administrador";
 
@@ -69,6 +75,14 @@ function Sidebar() {
                     <li>
                         <NavLink to="/asignaciones">
                             📌 Asignaciones
+                        </NavLink>
+                    </li>
+                )}
+
+                {puedeVerMapa && (
+                    <li>
+                        <NavLink to="/mapa">
+                            🗺️ Mapa
                         </NavLink>
                     </li>
                 )}
