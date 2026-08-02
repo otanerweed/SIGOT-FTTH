@@ -1,4 +1,6 @@
-const { sql } = require("../config/database");
+const {
+    sql
+} = require("../config/database");
 
 const {
     guardarActividadOFSC,
@@ -6,20 +8,23 @@ const {
     resolverEventoActividad
 } = require("./actividadOfscService");
 
-// Temporal hasta implementar login y JWT.
-const ID_USUARIO_SISTEMA = 1;
-
 /**
  * Limpia valores de texto.
  */
 function limpiarTexto(valor) {
-    if (valor === undefined || valor === null) {
+    if (
+        valor === undefined ||
+        valor === null
+    ) {
         return null;
     }
 
-    const texto = String(valor).trim();
+    const texto =
+        String(valor).trim();
 
-    return texto === "" ? null : texto;
+    return texto === ""
+        ? null
+        : texto;
 }
 
 /**
@@ -58,14 +63,19 @@ function limpiarFecha(valor) {
     }
 
     if (valor instanceof Date) {
-        return Number.isNaN(valor.getTime())
+        return Number.isNaN(
+            valor.getTime()
+        )
             ? null
             : valor;
     }
 
-    const fecha = new Date(valor);
+    const fecha =
+        new Date(valor);
 
-    return Number.isNaN(fecha.getTime())
+    return Number.isNaN(
+        fecha.getTime()
+    )
         ? null
         : fecha;
 }
@@ -74,7 +84,8 @@ function limpiarFecha(valor) {
  * Normaliza textos para compararlos.
  */
 function normalizarTexto(valor) {
-    const texto = limpiarTexto(valor);
+    const texto =
+        limpiarTexto(valor);
 
     if (!texto) {
         return null;
@@ -82,7 +93,10 @@ function normalizarTexto(valor) {
 
     return texto
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
         .toUpperCase();
 }
 
@@ -90,48 +104,71 @@ function normalizarTexto(valor) {
  * Normaliza los estados generales de la OT.
  */
 function normalizarEstadoOT(valor) {
-    const estado = normalizarTexto(valor);
+    const estado =
+        normalizarTexto(valor);
 
     if (!estado) {
         return "PENDIENTE";
     }
 
     const equivalencias = {
-        PENDIENTE: "PENDIENTE",
+        PENDIENTE:
+            "PENDIENTE",
 
-        INICIADO: "INICIADA",
-        INICIADA: "INICIADA",
+        INICIADO:
+            "INICIADA",
 
-        SUSPENDIDO: "SUSPENDIDA",
-        SUSPENDIDA: "SUSPENDIDA",
+        INICIADA:
+            "INICIADA",
 
-        "NO REALIZADO": "NO_REALIZADO",
-        NO_REALIZADO: "NO_REALIZADO",
+        SUSPENDIDO:
+            "SUSPENDIDA",
 
-        REPROGRAMADO: "REPROGRAMADA",
-        REPROGRAMADA: "REPROGRAMADA",
+        SUSPENDIDA:
+            "SUSPENDIDA",
 
-        FINALIZADO: "FINALIZADA",
-        FINALIZADA: "FINALIZADA",
+        "NO REALIZADO":
+            "NO_REALIZADO",
 
-        CANCELADO: "CANCELADA",
-        CANCELADA: "CANCELADA"
+        NO_REALIZADO:
+            "NO_REALIZADO",
+
+        REPROGRAMADO:
+            "REPROGRAMADA",
+
+        REPROGRAMADA:
+            "REPROGRAMADA",
+
+        FINALIZADO:
+            "FINALIZADA",
+
+        FINALIZADA:
+            "FINALIZADA",
+
+        CANCELADO:
+            "CANCELADA",
+
+        CANCELADA:
+            "CANCELADA"
     };
 
-    return equivalencias[estado] || estado;
+    return equivalencias[estado] ||
+        estado;
 }
 
 /**
  * Convierte una fecha a YYYY-MM-DD.
  */
 function fechaComparable(valor) {
-    const fecha = limpiarFecha(valor);
+    const fecha =
+        limpiarFecha(valor);
 
     if (!fecha) {
         return null;
     }
 
-    const anio = fecha.getFullYear();
+    const anio =
+        fecha.getFullYear();
 
     const mes = String(
         fecha.getMonth() + 1
@@ -147,17 +184,28 @@ function fechaComparable(valor) {
 /**
  * Compara dos textos.
  */
-function textosIguales(valorA, valorB) {
-    return limpiarTexto(valorA) ===
-        limpiarTexto(valorB);
+function textosIguales(
+    valorA,
+    valorB
+) {
+    return (
+        limpiarTexto(valorA) ===
+        limpiarTexto(valorB)
+    );
 }
 
 /**
  * Compara coordenadas.
  */
-function numerosIguales(valorA, valorB) {
-    const numeroA = limpiarNumero(valorA);
-    const numeroB = limpiarNumero(valorB);
+function numerosIguales(
+    valorA,
+    valorB
+) {
+    const numeroA =
+        limpiarNumero(valorA);
+
+    const numeroB =
+        limpiarNumero(valorB);
 
     if (
         numeroA === null &&
@@ -173,9 +221,11 @@ function numerosIguales(valorA, valorB) {
         return false;
     }
 
-    return Math.abs(
-        numeroA - numeroB
-    ) < 0.0000001;
+    return (
+        Math.abs(
+            numeroA - numeroB
+        ) < 0.0000001
+    );
 }
 
 /**
@@ -186,8 +236,10 @@ function conservarValor(
     valorNuevo,
     valorActual
 ) {
-    return valorNuevo === null ||
+    return (
+        valorNuevo === null ||
         valorNuevo === undefined
+    )
         ? valorActual
         : valorNuevo;
 }
@@ -201,10 +253,14 @@ function protegerEstadoFinal(
     estadoRecibido
 ) {
     const actual =
-        normalizarEstadoOT(estadoActual);
+        normalizarEstadoOT(
+            estadoActual
+        );
 
     const recibido =
-        normalizarEstadoOT(estadoRecibido);
+        normalizarEstadoOT(
+            estadoRecibido
+        );
 
     if (actual === "FINALIZADA") {
         return "FINALIZADA";
@@ -306,8 +362,11 @@ async function buscarOrden(
                     SELECT TOP 1
                         a.IdAsignacion
                     FROM dbo.Asignaciones a
-                    WHERE a.IdOrden = ot.IdOrden
-                      AND a.Estado = 'ACTIVA'
+                    WHERE
+                        a.IdOrden =
+                            ot.IdOrden
+                        AND a.Estado =
+                            'ACTIVA'
                     ORDER BY
                         a.FechaAsignacion DESC,
                         a.IdAsignacion DESC
@@ -318,16 +377,23 @@ async function buscarOrden(
                     SELECT TOP 1
                         a.IdAsignacion
                     FROM dbo.Asignaciones a
-                    WHERE a.IdOrden = ot.IdOrden
+                    WHERE
+                        a.IdOrden =
+                            ot.IdOrden
                     ORDER BY
                         a.FechaAsignacion DESC,
                         a.IdAsignacion DESC
                 ) ultimaAsignacion
 
-                WHERE ot.CodigoOT = @CodigoOT;
+                WHERE
+                    ot.CodigoOT =
+                        @CodigoOT;
             `);
 
-    return resultado.recordset[0] || null;
+    return (
+        resultado.recordset[0] ||
+        null
+    );
 }
 
 /**
@@ -357,7 +423,9 @@ async function insertarOrden(
             .input(
                 "CodigoOT",
                 sql.VarChar(30),
-                limpiarTexto(actividad.codigoOT)
+                limpiarTexto(
+                    actividad.codigoOT
+                )
             )
 
             .input(
@@ -528,7 +596,10 @@ async function insertarOrden(
                 );
             `);
 
-    return resultado.recordset[0].IdOrden;
+    return (
+        resultado.recordset[0]
+            .IdOrden
+    );
 }
 
 /**
@@ -540,7 +611,10 @@ async function vincularAsignacionActividad(
     idAsignacion,
     idActividad
 ) {
-    if (!idAsignacion || !idActividad) {
+    if (
+        !idAsignacion ||
+        !idActividad
+    ) {
         return;
     }
 
@@ -560,12 +634,17 @@ async function vincularAsignacionActividad(
 
         .query(`
             UPDATE dbo.Asignaciones
-            SET IdActividad = @IdActividad
-            WHERE IdAsignacion = @IdAsignacion
-              AND (
+            SET
+                IdActividad =
+                    @IdActividad
+            WHERE
+                IdAsignacion =
+                    @IdAsignacion
+                AND (
                     IdActividad IS NULL
-                    OR IdActividad = @IdActividad
-              );
+                    OR IdActividad =
+                        @IdActividad
+                );
         `);
 }
 
@@ -593,21 +672,24 @@ async function actualizarAsignacionActiva(
     let observacion = null;
 
     if (estadoOT === "REPROGRAMADA") {
-        nuevoEstado = "CANCELADA";
+        nuevoEstado =
+            "CANCELADA";
 
         observacion =
             "Asignación cerrada por reprogramación recibida desde OFSC.";
     }
 
     if (estadoOT === "FINALIZADA") {
-        nuevoEstado = "FINALIZADA";
+        nuevoEstado =
+            "FINALIZADA";
 
         observacion =
             "Asignación finalizada según el estado recibido desde OFSC.";
     }
 
     if (estadoOT === "CANCELADA") {
-        nuevoEstado = "CANCELADA";
+        nuevoEstado =
+            "CANCELADA";
 
         observacion =
             "Asignación cancelada según el estado recibido desde OFSC.";
@@ -644,30 +726,42 @@ async function actualizarAsignacionActiva(
         .query(`
             UPDATE dbo.Asignaciones
             SET
-                Estado = @NuevoEstado,
+                Estado =
+                    @NuevoEstado,
 
                 Observaciones =
                     CASE
-                        WHEN Observaciones IS NULL
-                          OR LTRIM(RTRIM(Observaciones)) = ''
-                        THEN @Observacion
-
-                        ELSE CONCAT(
-                            Observaciones,
-                            ' | ',
+                        WHEN
+                            Observaciones IS NULL
+                            OR LTRIM(
+                                RTRIM(
+                                    Observaciones
+                                )
+                            ) = ''
+                        THEN
                             @Observacion
-                        )
+
+                        ELSE
+                            CONCAT(
+                                Observaciones,
+                                ' | ',
+                                @Observacion
+                            )
                     END
 
-            WHERE IdAsignacion = @IdAsignacion
-              AND Estado = 'ACTIVA';
+            WHERE
+                IdAsignacion =
+                    @IdAsignacion
+                AND Estado =
+                    'ACTIVA';
         `);
 }
 
 /**
  * Registra un cambio general de la OT.
  *
- * No depende de una asignación técnica.
+ * El usuario responsable se obtiene del JWT
+ * y se recibe desde el controlador de importación.
  */
 async function registrarHistorialOT(
     transaction,
@@ -677,7 +771,8 @@ async function registrarHistorialOT(
     estadoAnterior,
     estadoNuevo,
     evento,
-    actividad
+    actividad,
+    idUsuario
 ) {
     const motivo =
         limpiarTexto(
@@ -749,7 +844,7 @@ async function registrarHistorialOT(
         .input(
             "IdUsuario",
             sql.Int,
-            ID_USUARIO_SISTEMA
+            idUsuario
         )
 
         .query(`
@@ -793,101 +888,115 @@ async function actualizarOrden(
     estadoOT
 ) {
     const datosFinales = {
-        codigoServicio: conservarValor(
-            limpiarTexto(
-                actividad.codigoServicio
+        codigoServicio:
+            conservarValor(
+                limpiarTexto(
+                    actividad.codigoServicio
+                ),
+                ordenExistente.CodigoServicio
             ),
-            ordenExistente.CodigoServicio
-        ),
 
-        productoPlan: conservarValor(
-            limpiarTexto(
-                actividad.productoPlan
+        productoPlan:
+            conservarValor(
+                limpiarTexto(
+                    actividad.productoPlan
+                ),
+                ordenExistente.ProductoPlan
             ),
-            ordenExistente.ProductoPlan
-        ),
 
-        tipoServicio: conservarValor(
-            limpiarTexto(
-                actividad.tipoServicio
+        tipoServicio:
+            conservarValor(
+                limpiarTexto(
+                    actividad.tipoServicio
+                ),
+                ordenExistente.TipoServicio
             ),
-            ordenExistente.TipoServicio
-        ),
 
-        cliente: conservarValor(
-            limpiarTexto(
-                actividad.cliente
+        cliente:
+            conservarValor(
+                limpiarTexto(
+                    actividad.cliente
+                ),
+                ordenExistente.Cliente
             ),
-            ordenExistente.Cliente
-        ),
 
-        dni: conservarValor(
-            limpiarTexto(
-                actividad.dni
+        dni:
+            conservarValor(
+                limpiarTexto(
+                    actividad.dni
+                ),
+                ordenExistente.DNI
             ),
-            ordenExistente.DNI
-        ),
 
-        telefono: conservarValor(
-            limpiarTexto(
-                actividad.telefono
+        telefono:
+            conservarValor(
+                limpiarTexto(
+                    actividad.telefono
+                ),
+                ordenExistente.Telefono
             ),
-            ordenExistente.Telefono
-        ),
 
-        direccion: conservarValor(
-            limpiarTexto(
-                actividad.direccion
+        direccion:
+            conservarValor(
+                limpiarTexto(
+                    actividad.direccion
+                ),
+                ordenExistente.Direccion
             ),
-            ordenExistente.Direccion
-        ),
 
-        distrito: conservarValor(
-            limpiarTexto(
-                actividad.distrito
+        distrito:
+            conservarValor(
+                limpiarTexto(
+                    actividad.distrito
+                ),
+                ordenExistente.Distrito
             ),
-            ordenExistente.Distrito
-        ),
 
-        latitudCliente: conservarValor(
-            limpiarNumero(
-                actividad.latitud
+        latitudCliente:
+            conservarValor(
+                limpiarNumero(
+                    actividad.latitud
+                ),
+                ordenExistente.LatitudCliente
             ),
-            ordenExistente.LatitudCliente
-        ),
 
-        longitudCliente: conservarValor(
-            limpiarNumero(
-                actividad.longitud
+        longitudCliente:
+            conservarValor(
+                limpiarNumero(
+                    actividad.longitud
+                ),
+                ordenExistente.LongitudCliente
             ),
-            ordenExistente.LongitudCliente
-        ),
 
-        rfs: conservarValor(
-            limpiarTexto(
-                actividad.rfs
+        rfs:
+            conservarValor(
+                limpiarTexto(
+                    actividad.rfs
+                ),
+                ordenExistente.RFS
             ),
-            ordenExistente.RFS
-        ),
 
-        fechaAgenda: conservarValor(
-            limpiarFecha(
-                actividad.fechaAgenda
+        fechaAgenda:
+            conservarValor(
+                limpiarFecha(
+                    actividad.fechaAgenda
+                ),
+                ordenExistente.FechaAgenda
             ),
-            ordenExistente.FechaAgenda
-        ),
 
-        horario: conservarValor(
-            limpiarTexto(
-                actividad.horario
-            ),
-            ordenExistente.Horario
-        )
+        horario:
+            conservarValor(
+                limpiarTexto(
+                    actividad.horario
+                ),
+                ordenExistente.Horario
+            )
     };
 
     const tieneAsignacionActiva =
         Boolean(
-            ordenExistente.IdAsignacionActiva
+            ordenExistente
+                .IdAsignacionActiva
         );
 
     const estadoAsignacion =
@@ -1114,8 +1223,9 @@ async function actualizarOrden(
                 FechaActualizacion =
                     GETDATE()
 
-            WHERE IdOrden =
-                @IdOrden;
+            WHERE
+                IdOrden =
+                    @IdOrden;
         `);
 
     return true;
@@ -1129,7 +1239,8 @@ async function actualizarOrden(
 async function guardarOrdenes(
     transaction,
     actividades,
-    idOperacion
+    idOperacion,
+    idUsuario
 ) {
     if (!transaction) {
         throw new Error(
@@ -1144,11 +1255,24 @@ async function guardarOrdenes(
     }
 
     if (
-        !Number.isInteger(idOperacion) ||
+        !Number.isInteger(
+            idOperacion
+        ) ||
         idOperacion <= 0
     ) {
         throw new Error(
             "El IdOperacion no es válido."
+        );
+    }
+
+    if (
+        !Number.isInteger(
+            idUsuario
+        ) ||
+        idUsuario <= 0
+    ) {
+        throw new Error(
+            "El IdUsuario no es válido."
         );
     }
 
@@ -1168,7 +1292,8 @@ async function guardarOrdenes(
         indice < actividades.length;
         indice++
     ) {
-        const actividad = actividades[indice];
+        const actividad =
+            actividades[indice];
 
         const numeroFilaExcel =
             indice + 2;
@@ -1187,7 +1312,9 @@ async function guardarOrdenes(
             rechazadas++;
 
             detalleRechazadas.push({
-                fila: numeroFilaExcel,
+                fila:
+                    numeroFilaExcel,
+
                 motivo:
                     "La fila no contiene Código OT."
             });
@@ -1199,8 +1326,11 @@ async function guardarOrdenes(
             rechazadas++;
 
             detalleRechazadas.push({
-                fila: numeroFilaExcel,
+                fila:
+                    numeroFilaExcel,
+
                 codigoOT,
+
                 motivo:
                     "La fila no contiene ID de actividad OFSC."
             });
@@ -1209,7 +1339,7 @@ async function guardarOrdenes(
         }
 
         try {
-            let ordenExistente =
+            const ordenExistente =
                 await buscarOrden(
                     transaction,
                     codigoOT
@@ -1243,20 +1373,23 @@ async function guardarOrdenes(
                 await registrarHistorialOT(
                     transaction,
                     idOrden,
-                    resultadoActividad.idActividad,
+                    resultadoActividad
+                        .idActividad,
                     idOperacion,
                     null,
                     estadoDesdeActividad,
                     resolverEventoActividad(
                         actividad
                     ),
-                    actividad
+                    actividad,
+                    idUsuario
                 );
 
                 insertadas++;
 
                 if (
-                    resultadoActividad.insertada
+                    resultadoActividad
+                        .insertada
                 ) {
                     actividadesInsertadas++;
                 }
@@ -1309,7 +1442,8 @@ async function guardarOrdenes(
                 );
 
             const cambioEstado =
-                estadoAnterior !== estadoFinal;
+                estadoAnterior !==
+                estadoFinal;
 
             const ordenActualizada =
                 await actualizarOrden(
@@ -1324,13 +1458,16 @@ async function guardarOrdenes(
              * asignación que estaba activa.
              */
             const idAsignacionRelacionada =
-                ordenExistente.IdAsignacionActiva ||
-                ordenExistente.IdUltimaAsignacion;
+                ordenExistente
+                    .IdAsignacionActiva ||
+                ordenExistente
+                    .IdUltimaAsignacion;
 
             await vincularAsignacionActividad(
                 transaction,
                 idAsignacionRelacionada,
-                resultadoActividad.idActividad
+                resultadoActividad
+                    .idActividad
             );
 
             /*
@@ -1338,8 +1475,10 @@ async function guardarOrdenes(
              */
             await actualizarAsignacionActiva(
                 transaction,
-                ordenExistente.IdAsignacionActiva,
-                resultadoActividad.idActividad,
+                ordenExistente
+                    .IdAsignacionActiva,
+                resultadoActividad
+                    .idActividad,
                 estadoFinal
             );
 
@@ -1351,12 +1490,15 @@ async function guardarOrdenes(
                 await registrarHistorialOT(
                     transaction,
                     ordenExistente.IdOrden,
-                    resultadoActividad.idActividad,
+                    resultadoActividad
+                        .idActividad,
                     idOperacion,
                     estadoAnterior,
                     estadoFinal,
-                    resultadoActividad.evento,
-                    actividad
+                    resultadoActividad
+                        .evento,
+                    actividad,
+                    idUsuario
                 );
             }
 
@@ -1389,7 +1531,8 @@ async function guardarOrdenes(
         sinCambios,
 
         /*
-         * Compatibilidad temporal con frontend.
+         * Compatibilidad temporal
+         * con el frontend.
          */
         duplicadas:
             sinCambios,

@@ -38,8 +38,38 @@ async function listarAsignaciones(req, res) {
  */
 async function ejecutarAsignacion(req, res) {
     try {
+        // =====================================
+        // USUARIO AUTENTICADO DESDE EL JWT
+        // =====================================
+        const idUsuarioAutenticado = Number(
+            req.usuario?.idUsuario
+        );
+
+        if (
+            !Number.isInteger(
+                idUsuarioAutenticado
+            ) ||
+            idUsuarioAutenticado <= 0
+        ) {
+            return res.status(401).json({
+                ok: false,
+                mensaje:
+                    "No se pudo identificar al usuario autenticado."
+            });
+        }
+
+        console.log(
+            "========== ASIGNACIÓN AUTOMÁTICA =========="
+        );
+
+        console.log(
+            `Usuario responsable: ${idUsuarioAutenticado}`
+        );
+
         const resultado =
-            await asignarOrdenesAutomaticamente();
+            await asignarOrdenesAutomaticamente(
+                idUsuarioAutenticado
+            );
 
         const cantidadErrores =
             resultado.errores.length;
@@ -66,7 +96,8 @@ async function ejecutarAsignacion(req, res) {
                     cantidadErrores
             },
 
-            errores: resultado.errores
+            errores:
+                resultado.errores
         });
     } catch (error) {
         console.error(

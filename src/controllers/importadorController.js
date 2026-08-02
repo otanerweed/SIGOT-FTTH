@@ -1,7 +1,12 @@
 const fs = require("fs/promises");
 
-const { leerExcel } = require("../services/excelService");
-const { guardarOrdenes } = require("../services/ordenesService");
+const {
+    leerExcel
+} = require("../services/excelService");
+
+const {
+    guardarOrdenes
+} = require("../services/ordenesService");
 
 const {
     sincronizarOperacion
@@ -11,9 +16,6 @@ const {
     conectarDB,
     sql
 } = require("../config/database");
-
-// Temporal hasta implementar login y JWT.
-const ID_USUARIO_SISTEMA = 1;
 
 /**
  * Importa un archivo Excel de OFSC.
@@ -25,8 +27,32 @@ async function importarOFSC(req, res) {
     let transactionIniciada = false;
 
     try {
+        // =====================================
+        // USUARIO AUTENTICADO DESDE EL JWT
+        // =====================================
+        const idUsuarioAutenticado = Number(
+            req.usuario?.idUsuario
+        );
+
+        if (
+            !Number.isInteger(
+                idUsuarioAutenticado
+            ) ||
+            idUsuarioAutenticado <= 0
+        ) {
+            return res.status(401).json({
+                ok: false,
+                mensaje:
+                    "No se pudo identificar al usuario autenticado."
+            });
+        }
+
         console.log(
             "========== INICIO IMPORTACIÓN =========="
+        );
+
+        console.log(
+            `Usuario responsable: ${idUsuarioAutenticado}`
         );
 
         if (!req.file) {
@@ -45,7 +71,9 @@ async function importarOFSC(req, res) {
         /*
          * Leer y transformar el Excel.
          */
-        const ordenes = leerExcel(req.file.path);
+        const ordenes = leerExcel(
+            req.file.path
+        );
 
         if (
             !Array.isArray(ordenes) ||
@@ -64,7 +92,8 @@ async function importarOFSC(req, res) {
 
         const pool = await conectarDB();
 
-        transaction = new sql.Transaction(pool);
+        transaction =
+            new sql.Transaction(pool);
 
         await transaction.begin(
             sql.ISOLATION_LEVEL.SERIALIZABLE
@@ -87,7 +116,7 @@ async function importarOFSC(req, res) {
                 .input(
                     "IdUsuario",
                     sql.Int,
-                    ID_USUARIO_SISTEMA
+                    idUsuarioAutenticado
                 )
 
                 .query(`
@@ -127,11 +156,15 @@ async function importarOFSC(req, res) {
         /*
          * Insertar órdenes nuevas y actualizar
          * las órdenes existentes.
+         *
+         * También se envía el usuario autenticado
+         * para registrar el historial.
          */
         const resumen = await guardarOrdenes(
             transaction,
             ordenes,
-            idOperacion
+            idOperacion,
+            idUsuarioAutenticado
         );
 
         const cantidadInsertadas =
@@ -155,6 +188,7 @@ async function importarOFSC(req, res) {
          */
         if (cantidadAplicadas === 0) {
             await transaction.rollback();
+
             transactionIniciada = false;
 
             return res.status(200).json({
@@ -198,8 +232,11 @@ async function importarOFSC(req, res) {
                 .query(`
                     UPDATE dbo.Operaciones
                     SET
-                        Observaciones = @Observaciones
-                    WHERE IdOperacion = @IdOperacion;
+                        Observaciones =
+                            @Observaciones
+                    WHERE
+                        IdOperacion =
+                            @IdOperacion;
                 `);
         } else {
             /*
@@ -238,16 +275,26 @@ async function importarOFSC(req, res) {
                     SET
                         CantidadOT =
                             @CantidadActualizadas,
+
                         CantidadAsignadas = 0,
+
                         CantidadPendientes = 0,
+
                         CantidadFinalizadas = 0,
+
                         Estado = 'CERRADA',
-                        Observaciones = @Observaciones
-                    WHERE IdOperacion = @IdOperacion;
+
+                        Observaciones =
+                            @Observaciones
+
+                    WHERE
+                        IdOperacion =
+                            @IdOperacion;
                 `);
         }
 
         await transaction.commit();
+
         transactionIniciada = false;
 
         let mensaje;
@@ -258,7 +305,9 @@ async function importarOFSC(req, res) {
         ) {
             mensaje =
                 "Importación realizada. Se registraron órdenes nuevas y se actualizaron órdenes existentes.";
-        } else if (cantidadInsertadas > 0) {
+        } else if (
+            cantidadInsertadas > 0
+        ) {
             mensaje =
                 "Importación realizada correctamente.";
         } else {
@@ -268,6 +317,10 @@ async function importarOFSC(req, res) {
 
         console.log(
             `✅ Proceso completado. Operación: ${idOperacion}`
+        );
+
+        console.log(
+            `Usuario responsable: ${idUsuarioAutenticado}`
         );
 
         console.log(
@@ -303,7 +356,10 @@ async function importarOFSC(req, res) {
             }
         }
 
-        console.error("❌ ERROR IMPORTADOR");
+        console.error(
+            "❌ ERROR IMPORTADOR"
+        );
+
         console.error(error);
 
         return res.status(500).json({
@@ -319,10 +375,13 @@ async function importarOFSC(req, res) {
          */
         if (req.file?.path) {
             try {
-                await fs.unlink(req.file.path);
+                await fs.unlink(
+                    req.file.path
+                );
             } catch (errorArchivo) {
                 if (
-                    errorArchivo.code !== "ENOENT"
+                    errorArchivo.code !==
+                    "ENOENT"
                 ) {
                     console.error(
                         "No se pudo eliminar el archivo temporal:",
