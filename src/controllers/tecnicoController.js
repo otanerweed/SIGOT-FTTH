@@ -1,6 +1,79 @@
 const tecnicoModel = require("../models/tecnicoModel");
 
 // ===============================
+// NORMALIZAR DATOS DEL TÉCNICO
+// ===============================
+function normalizarDatosTecnico(
+    datos = {},
+    tecnicoExistente = null
+) {
+    return {
+        CodigoTecnico: String(
+            datos.CodigoTecnico || ""
+        )
+            .trim()
+            .toUpperCase(),
+
+        NombreCompleto: String(
+            datos.NombreCompleto || ""
+        ).trim(),
+
+        Telefono: datos.Telefono
+            ? String(datos.Telefono).trim()
+            : null,
+
+        TipoTecnico: String(
+            datos.TipoTecnico || ""
+        ).trim(),
+
+        DistritoBase: String(
+            datos.DistritoBase || ""
+        ).trim(),
+
+        CapacidadMaxima: Number(
+            datos.CapacidadMaxima
+        ),
+
+        Disponible:
+            typeof datos.Disponible === "boolean"
+                ? datos.Disponible
+                : tecnicoExistente?.Disponible ??
+                  true
+    };
+}
+
+// ===============================
+// VALIDAR DATOS DEL TÉCNICO
+// ===============================
+function validarDatosTecnico(datos) {
+    if (
+        !datos.CodigoTecnico ||
+        !datos.NombreCompleto ||
+        !datos.TipoTecnico ||
+        !datos.DistritoBase
+    ) {
+        return "Complete todos los campos obligatorios.";
+    }
+
+    if (
+        !Number.isInteger(datos.CapacidadMaxima) ||
+        datos.CapacidadMaxima <= 0
+    ) {
+        return "La capacidad máxima debe ser un número entero mayor que cero.";
+    }
+
+    if (datos.CodigoTecnico.length > 20) {
+        return "El código del técnico no puede superar los 20 caracteres.";
+    }
+
+    if (datos.NombreCompleto.length > 150) {
+        return "El nombre del técnico no puede superar los 150 caracteres.";
+    }
+
+    return null;
+}
+
+// ===============================
 // LISTAR TÉCNICOS
 // ===============================
 async function listarTecnicos(req, res) {
@@ -55,18 +128,27 @@ async function obtenerTecnico(req, res) {
 // ===============================
 async function crearTecnico(req, res) {
     try {
-        const datos = req.body;
+        const datos =
+            normalizarDatosTecnico(req.body);
 
-        if (
-            !datos.CodigoTecnico ||
-            !datos.NombreCompleto ||
-            !datos.TipoTecnico ||
-            !datos.DistritoBase ||
-            datos.CapacidadMaxima === undefined
-        ) {
+        const errorValidacion =
+            validarDatosTecnico(datos);
+
+        if (errorValidacion) {
             return res.status(400).json({
+                mensaje: errorValidacion
+            });
+        }
+
+        const tecnicoDuplicado =
+            await tecnicoModel.obtenerTecnicoPorCodigo(
+                datos.CodigoTecnico
+            );
+
+        if (tecnicoDuplicado) {
+            return res.status(409).json({
                 mensaje:
-                    "Complete todos los campos obligatorios."
+                    `Ya existe un técnico registrado con el código ${datos.CodigoTecnico}.`
             });
         }
 
@@ -97,7 +179,6 @@ async function crearTecnico(req, res) {
 async function actualizarTecnico(req, res) {
     try {
         const { id } = req.params;
-        const datos = req.body;
 
         const tecnicoExistente =
             await tecnicoModel.obtenerTecnicoPorId(id);
@@ -108,16 +189,31 @@ async function actualizarTecnico(req, res) {
             });
         }
 
-        if (
-            !datos.CodigoTecnico ||
-            !datos.NombreCompleto ||
-            !datos.TipoTecnico ||
-            !datos.DistritoBase ||
-            datos.CapacidadMaxima === undefined
-        ) {
+        const datos =
+            normalizarDatosTecnico(
+                req.body,
+                tecnicoExistente
+            );
+
+        const errorValidacion =
+            validarDatosTecnico(datos);
+
+        if (errorValidacion) {
             return res.status(400).json({
+                mensaje: errorValidacion
+            });
+        }
+
+        const tecnicoDuplicado =
+            await tecnicoModel.obtenerTecnicoPorCodigo(
+                datos.CodigoTecnico,
+                Number(id)
+            );
+
+        if (tecnicoDuplicado) {
+            return res.status(409).json({
                 mensaje:
-                    "Complete todos los campos obligatorios."
+                    `El código ${datos.CodigoTecnico} ya pertenece a otro técnico.`
             });
         }
 
@@ -150,6 +246,7 @@ async function actualizarTecnico(req, res) {
         });
     }
 }
+
 // ===============================
 // ACTIVAR O DESACTIVAR TÉCNICO
 // ===============================
@@ -204,6 +301,10 @@ async function actualizarEstadoTecnico(req, res) {
         });
     }
 }
+
+// ===============================
+// EXPORTAR FUNCIONES
+// ===============================
 module.exports = {
     listarTecnicos,
     obtenerTecnico,

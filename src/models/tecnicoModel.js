@@ -60,6 +60,54 @@ async function obtenerTecnicoPorId(id) {
 }
 
 // ===============================
+// OBTENER TÉCNICO POR CÓDIGO
+// ===============================
+async function obtenerTecnicoPorCodigo(
+    codigoTecnico,
+    idExcluir = null
+) {
+    const pool = await conectarDB();
+
+    const resultado = await pool.request()
+        .input(
+            "CodigoTecnico",
+            sql.VarChar(20),
+            codigoTecnico
+        )
+        .input(
+            "IdExcluir",
+            sql.Int,
+            idExcluir
+        )
+        .query(`
+            SELECT TOP (1)
+                IdTecnico,
+                CodigoTecnico,
+                NombreCompleto,
+                Activo
+            FROM dbo.Tecnicos
+            WHERE
+                UPPER(
+                    LTRIM(
+                        RTRIM(CodigoTecnico)
+                    )
+                ) =
+                UPPER(
+                    LTRIM(
+                        RTRIM(@CodigoTecnico)
+                    )
+                )
+                AND
+                (
+                    @IdExcluir IS NULL
+                    OR IdTecnico <> @IdExcluir
+                );
+        `);
+
+    return resultado.recordset[0] || null;
+}
+
+// ===============================
 // CREAR TÉCNICO
 // ===============================
 async function crearTecnico(datos) {
@@ -131,6 +179,7 @@ async function crearTecnico(datos) {
 
     return resultado.recordset[0];
 }
+
 // ===============================
 // ACTUALIZAR TÉCNICO
 // ===============================
@@ -195,6 +244,7 @@ async function actualizarTecnico(id, datos) {
 
     return resultado.recordset[0];
 }
+
 // ===============================
 // ACTIVAR O DESACTIVAR TÉCNICO
 // ===============================
@@ -217,11 +267,6 @@ async function actualizarEstadoTecnico(id, activo) {
             SET
                 Activo = @Activo,
 
-                /*
-                 * Si el técnico se desactiva,
-                 * también deja de estar disponible
-                 * para nuevas asignaciones.
-                 */
                 Disponible =
                     CASE
                         WHEN @Activo = 0 THEN 0
@@ -234,12 +279,14 @@ async function actualizarEstadoTecnico(id, activo) {
 
     return resultado.recordset[0];
 }
+
 // ===============================
 // EXPORTAR FUNCIONES
 // ===============================
 module.exports = {
     obtenerTecnicos,
     obtenerTecnicoPorId,
+    obtenerTecnicoPorCodigo,
     crearTecnico,
     actualizarTecnico,
     actualizarEstadoTecnico
