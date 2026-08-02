@@ -18,6 +18,7 @@ import AsignacionesPage from "./pages/AsignacionesPage";
 import ReportesPage from "./pages/ReportesPage";
 import Mapa from "./pages/Mapa";
 import UsuariosPage from "./pages/UsuariosPage";
+import AuditoriaPage from "./pages/AuditoriaPage";
 
 function App() {
     return (
@@ -104,6 +105,20 @@ function App() {
                         <Route
                             path="reportes"
                             element={<ReportesPage />}
+                        />
+
+                        <Route
+                            path="auditoria"
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <AuditoriaPage />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route

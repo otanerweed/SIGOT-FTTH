@@ -35,12 +35,19 @@ function Sidebar() {
         "Supervisor"
     ].includes(rol);
 
+    const puedeVerAuditoria = [
+        "Administrador",
+        "Supervisor"
+    ].includes(rol);
+
     const puedeGestionarUsuarios =
         rol === "Administrador";
 
     return (
         <aside className="sidebar">
-            <h3>Menú</h3>
+            <h3>
+                Menú
+            </h3>
 
             <ul>
                 <li>
@@ -92,6 +99,14 @@ function Sidebar() {
                         📈 Reportes
                     </NavLink>
                 </li>
+
+                {puedeVerAuditoria && (
+                    <li>
+                        <NavLink to="/auditoria">
+                            🔎 Auditoría
+                        </NavLink>
+                    </li>
+                )}
 
                 {puedeGestionarUsuarios && (
                     <li>
