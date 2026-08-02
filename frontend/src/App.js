@@ -17,18 +17,17 @@ import OrdenesPage from "./pages/OrdenesPage";
 import AsignacionesPage from "./pages/AsignacionesPage";
 import ReportesPage from "./pages/ReportesPage";
 import Mapa from "./pages/Mapa";
+import UsuariosPage from "./pages/UsuariosPage";
 
 function App() {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Ruta pública */}
                 <Route
                     path="/login"
                     element={<LoginPage />}
                 />
 
-                {/* Rutas que requieren sesión */}
                 <Route element={<RutaProtegida />}>
                     <Route
                         path="/"
@@ -106,10 +105,22 @@ function App() {
                             path="reportes"
                             element={<ReportesPage />}
                         />
+
+                        <Route
+                            path="usuarios"
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador"
+                                    ]}
+                                >
+                                    <UsuariosPage />
+                                </RutaPorRol>
+                            }
+                        />
                     </Route>
                 </Route>
 
-                {/* Ruta inexistente */}
                 <Route
                     path="*"
                     element={

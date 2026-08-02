@@ -1,4 +1,6 @@
-import { NavLink } from "react-router-dom";
+import {
+    NavLink
+} from "react-router-dom";
 
 import {
     obtenerUsuario
@@ -26,6 +28,9 @@ function Sidebar() {
         "Coordinador",
         "Supervisor"
     ].includes(rol);
+
+    const puedeGestionarUsuarios =
+        rol === "Administrador";
 
     return (
         <aside className="sidebar">
@@ -73,6 +78,14 @@ function Sidebar() {
                         📈 Reportes
                     </NavLink>
                 </li>
+
+                {puedeGestionarUsuarios && (
+                    <li>
+                        <NavLink to="/usuarios">
+                            👤 Usuarios
+                        </NavLink>
+                    </li>
+                )}
             </ul>
         </aside>
     );

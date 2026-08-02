@@ -34,6 +34,9 @@ const reporteRoutes = require(
     "./routes/reporteRoutes"
 );
 
+const usuarioRoutes = require(
+    "./routes/usuarioRoutes"
+);
 // =====================================
 // MIDDLEWARE DE AUTENTICACIÓN
 // =====================================
@@ -121,6 +124,13 @@ app.use(
 app.use(
     "/api/reportes",
     reporteRoutes
+);
+// =====================================
+// USUARIOS
+// =====================================
+app.use(
+    "/api/usuarios",
+    usuarioRoutes
 );
 
 module.exports = app;
