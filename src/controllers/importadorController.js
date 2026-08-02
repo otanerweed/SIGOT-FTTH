@@ -68,9 +68,9 @@ async function importarOFSC(req, res) {
             req.file.originalname
         );
 
-        /*
-         * Leer y transformar el Excel.
-         */
+        // =====================================
+        // LEER Y TRANSFORMAR EL EXCEL
+        // =====================================
         const ordenes = leerExcel(
             req.file.path
         );
@@ -101,9 +101,9 @@ async function importarOFSC(req, res) {
 
         transactionIniciada = true;
 
-        /*
-         * Registrar la importación del archivo.
-         */
+        // =====================================
+        // REGISTRAR OPERACIÓN DE IMPORTACIÓN
+        // =====================================
         const resultadoOperacion =
             await new sql.Request(transaction)
 
@@ -153,13 +153,9 @@ async function importarOFSC(req, res) {
             resultadoOperacion.recordset[0]
                 .IdOperacion;
 
-        /*
-         * Insertar órdenes nuevas y actualizar
-         * las órdenes existentes.
-         *
-         * También se envía el usuario autenticado
-         * para registrar el historial.
-         */
+        // =====================================
+        // GUARDAR O ACTUALIZAR ÓRDENES
+        // =====================================
         const resumen = await guardarOrdenes(
             transaction,
             ordenes,
@@ -182,10 +178,9 @@ async function importarOFSC(req, res) {
             cantidadInsertadas +
             cantidadActualizadas;
 
-        /*
-         * Si no existen órdenes nuevas ni cambios,
-         * eliminamos la operación vacía.
-         */
+        // =====================================
+        // ARCHIVO SIN CAMBIOS
+        // =====================================
         if (cantidadAplicadas === 0) {
             await transaction.rollback();
 
@@ -200,10 +195,9 @@ async function importarOFSC(req, res) {
             });
         }
 
-        /*
-         * Cuando existen órdenes nuevas, estas sí
-         * pertenecen a la operación recién creada.
-         */
+        // =====================================
+        // IMPORTACIÓN CON ÓRDENES NUEVAS
+        // =====================================
         if (cantidadInsertadas > 0) {
             await sincronizarOperacion(
                 transaction,
@@ -239,13 +233,9 @@ async function importarOFSC(req, res) {
                             @IdOperacion;
                 `);
         } else {
-            /*
-             * Si solamente se actualizaron órdenes,
-             * ninguna cambia su IdOperacion original.
-             *
-             * Conservamos esta operación como registro
-             * de sincronización y la dejamos cerrada.
-             */
+            // =====================================
+            // SINCRONIZACIÓN SIN ÓRDENES NUEVAS
+            // =====================================
             await new sql.Request(transaction)
 
                 .input(
@@ -369,10 +359,9 @@ async function importarOFSC(req, res) {
             detalle: error.message
         });
     } finally {
-        /*
-         * Eliminar el Excel temporal después
-         * de procesarlo.
-         */
+        // =====================================
+        // ELIMINAR ARCHIVO TEMPORAL
+        // =====================================
         if (req.file?.path) {
             try {
                 await fs.unlink(
@@ -394,14 +383,17 @@ async function importarOFSC(req, res) {
 }
 
 /**
- * Consulta todas las órdenes.
+ * Consulta el historial de importaciones.
  *
- * GET /api/importador/ordenes
+ * GET /api/importador/historial
  */
-async function obtenerOrdenes(req, res) {
+async function obtenerHistorialImportaciones(
+    req,
+    res
+) {
     try {
         console.log(
-            "========== OBTENER ÓRDENES =========="
+            "========== HISTORIAL DE IMPORTACIONES =========="
         );
 
         const pool = await conectarDB();
@@ -409,49 +401,55 @@ async function obtenerOrdenes(req, res) {
         const resultado =
             await pool.request().query(`
                 SELECT
-                    IdOrden,
-                    IdOperacion,
-                    CodigoOT,
-                    CodigoServicio,
-                    ProductoPlan,
-                    TipoServicio,
-                    Cliente,
-                    DNI,
-                    Telefono,
-                    Direccion,
-                    Distrito,
-                    LatitudCliente,
-                    LongitudCliente,
-                    PuertoNAP,
-                    RFS,
-                    FechaAgenda,
-                    Horario,
-                    EstadoOT,
-                    EstadoAsignacion,
-                    FechaImportacion,
-                    FechaActualizacion
-                FROM dbo.OrdenesTrabajo
-                ORDER BY IdOrden DESC;
-            `);
+                    O.IdOperacion,
+                    O.FechaOperacion,
+                    O.NombreArchivo,
+                    O.CantidadOT,
+                    O.CantidadAsignadas,
+                    O.CantidadPendientes,
+                    O.CantidadFinalizadas,
+                    O.IdUsuario,
+                    O.FechaImportacion,
+                    O.Estado,
+                    O.Observaciones,
 
-        console.log(
-            `✅ Total órdenes: ${resultado.recordset.length}`
-        );
+                    U.NombreCompleto
+                        AS UsuarioResponsable,
+
+                    U.Usuario
+                        AS NombreUsuarioResponsable,
+
+                    R.Nombre
+                        AS RolResponsable
+
+                FROM dbo.Operaciones O
+
+                LEFT JOIN dbo.Usuarios U
+                    ON U.IdUsuario =
+                        O.IdUsuario
+
+                LEFT JOIN dbo.Roles R
+                    ON R.IdRol =
+                        U.IdRol
+
+                ORDER BY
+                    O.FechaImportacion DESC,
+                    O.IdOperacion DESC;
+            `);
 
         return res.status(200).json(
             resultado.recordset
         );
     } catch (error) {
         console.error(
-            "❌ ERROR obtenerOrdenes"
+            "Error al consultar el historial de importaciones:",
+            error
         );
-
-        console.error(error);
 
         return res.status(500).json({
             ok: false,
             mensaje:
-                "No se pudieron consultar las órdenes.",
+                "No se pudo consultar el historial de importaciones.",
             detalle: error.message
         });
     }
@@ -459,5 +457,5 @@ async function obtenerOrdenes(req, res) {
 
 module.exports = {
     importarOFSC,
-    obtenerOrdenes
+    obtenerHistorialImportaciones
 };

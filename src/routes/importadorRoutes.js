@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 
 const router = express.Router();
 
@@ -7,7 +7,8 @@ const upload = require(
 );
 
 const {
-    importarOFSC
+    importarOFSC,
+    obtenerHistorialImportaciones
 } = require(
     "../controllers/importadorController"
 );
@@ -25,7 +26,7 @@ const {
 );
 
 // =====================================
-// IMPORTAR EXCEL
+// IMPORTAR EXCEL OFSC
 // ADMINISTRADOR Y COORDINADOR
 // =====================================
 router.post(
@@ -39,7 +40,20 @@ router.post(
 );
 
 // =====================================
-// CONSULTAR ÓRDENES
+// HISTORIAL DE IMPORTACIONES
+// ADMINISTRADOR Y COORDINADOR
+// =====================================
+router.get(
+    "/historial",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    obtenerHistorialImportaciones
+);
+
+// =====================================
+// CONSULTAR Ã“RDENES
 // TODOS LOS ROLES AUTENTICADOS
 // =====================================
 router.get(
