@@ -1,0 +1,254 @@
+.tecnicos-page {
+    width: 100%;
+}
+
+.tecnicos-page h1 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 30px;
+}
+
+.tecnicos-page > p {
+    margin: 0 0 24px;
+    color: #64748b;
+}
+
+.tecnicos-formulario {
+    margin-bottom: 28px;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+}
+
+.tecnicos-formulario h2 {
+    margin: 0 0 20px;
+    color: #1e293b;
+    font-size: 21px;
+}
+
+.formulario-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 18px;
+}
+
+.formulario-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.formulario-grid label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.formulario-grid input,
+.formulario-grid select {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    outline: none;
+}
+
+.formulario-grid input:focus,
+.formulario-grid select:focus {
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12);
+}
+
+.campo-checkbox {
+    justify-content: flex-end;
+}
+
+.campo-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    cursor: pointer;
+}
+
+.campo-checkbox input {
+    width: auto;
+}
+
+.formulario-acciones {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.formulario-acciones button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.formulario-acciones button[type="submit"] {
+    background: #1565c0;
+    color: #ffffff;
+}
+
+.formulario-acciones button[type="submit"]:hover {
+    background: #0b5394;
+}
+
+.formulario-acciones button[type="button"] {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.formulario-acciones button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.mensaje-exito,
+.mensaje-error {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mensaje-exito {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.mensaje-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.tecnicos-page hr {
+    display: none;
+}
+
+.tecnicos-page h2 {
+    color: #1e293b;
+}
+
+.tabla-tecnicos-contenedor {
+    width: 100%;
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+}
+
+.tabla-tecnicos {
+    width: 100%;
+    min-width: 1100px;
+    border-collapse: collapse;
+}
+
+.tabla-tecnicos th {
+    padding: 13px 12px;
+    background: #1e293b;
+    color: #ffffff;
+    text-align: left;
+    font-size: 13px;
+}
+
+.tabla-tecnicos td {
+    padding: 13px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 14px;
+}
+
+.tabla-tecnicos tbody tr:hover {
+    background: #f8fafc;
+}
+
+.tabla-tecnicos tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.boton-editar {
+    padding: 8px 13px;
+    border: none;
+    border-radius: 7px;
+    background: #1565c0;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.boton-editar:hover {
+    background: #0b5394;
+}
+
+@media (max-width: 1050px) {
+    .formulario-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .tecnicos-formulario {
+        padding: 18px;
+    }
+
+    .formulario-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .formulario-acciones {
+        flex-direction: column;
+    }
+
+    .formulario-acciones button {
+        width: 100%;
+    }
+}
+.acciones-tecnico {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.boton-activar,
+.boton-desactivar {
+    padding: 8px 13px;
+    border: none;
+    border-radius: 7px;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.boton-activar {
+    background: #15803d;
+}
+
+.boton-activar:hover {
+    background: #166534;
+}
+
+.boton-desactivar {
+    background: #dc2626;
+}
+
+.boton-desactivar:hover {
+    background: #b91c1c;
+}
+
+.boton-editar:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}

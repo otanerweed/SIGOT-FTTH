@@ -3,20 +3,36 @@ const cors = require("cors");
 
 const app = express();
 
-// Rutas
+// =====================================
+// RUTAS
+// =====================================
+const authRoutes = require("./routes/authRoutes");
 const importadorRoutes = require("./routes/importadorRoutes");
 const ordenesRoutes = require("./routes/ordenesRoutes");
-const tecnicosRoutes = require("./routes/tecnicoRoutes"); // ← IMPORTANTE
+const tecnicosRoutes = require("./routes/tecnicoRoutes");
 const asignacionRoutes = require("./routes/asignacionRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
-const asignacionesListadoRoutes = require("./routes/asignacionesListadoRoutes");
+const asignacionesListadoRoutes = require(
+    "./routes/asignacionesListadoRoutes"
+);
 const reporteRoutes = require("./routes/reporteRoutes");
 
-// Middlewares
+// =====================================
+// MIDDLEWARE DE AUTENTICACIÓN
+// =====================================
+const {
+    verificarToken
+} = require("./middlewares/authMiddleware");
+
+// =====================================
+// MIDDLEWARES GENERALES
+// =====================================
 app.use(cors());
 app.use(express.json());
 
-// Ruta principal
+// =====================================
+// RUTA PRINCIPAL PÚBLICA
+// =====================================
 app.get("/", (req, res) => {
     res.json({
         sistema: "SIGOT-FTTH",
@@ -25,21 +41,50 @@ app.get("/", (req, res) => {
     });
 });
 
-// Importador
+// =====================================
+// AUTENTICACIÓN PÚBLICA
+// =====================================
+app.use("/api/auth", authRoutes);
+
+/*
+ * Todas las rutas registradas después
+ * de esta línea requieren un token JWT.
+ */
+app.use(verificarToken);
+
+// =====================================
+// IMPORTADOR
+// =====================================
 app.use("/api/importador", importadorRoutes);
 
-// Órdenes
+// =====================================
+// ÓRDENES
+// =====================================
 app.use("/api/ordenes", ordenesRoutes);
 
-// Técnicos
+// =====================================
+// TÉCNICOS
+// =====================================
 app.use("/api/tecnicos", tecnicosRoutes);
 
+// =====================================
+// ASIGNACIONES
+// =====================================
 app.use("/api/asignaciones", asignacionRoutes);
 
+app.use(
+    "/api/asignaciones",
+    asignacionesListadoRoutes
+);
+
+// =====================================
+// DASHBOARD
+// =====================================
 app.use("/api/dashboard", dashboardRoutes);
 
-app.use("/api/asignaciones", asignacionesListadoRoutes);
-
+// =====================================
+// REPORTES
+// =====================================
 app.use("/api/reportes", reporteRoutes);
 
 module.exports = app;

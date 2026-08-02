@@ -1,0 +1,94 @@
+.navbar {
+    min-height: 70px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 30px;
+    background: #1565c0;
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-logo {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.navbar-usuario {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.navbar-avatar {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #ffffff;
+    color: #1565c0;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.navbar-datos {
+    display: flex;
+    flex-direction: column;
+    min-width: 100px;
+}
+
+.navbar-nombre {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.navbar-rol {
+    margin-top: 2px;
+    color: #dbeafe;
+    font-size: 12px;
+}
+
+.navbar-cerrar-sesion {
+    margin-left: 8px;
+    padding: 9px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 7px;
+    background: transparent;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        color 0.2s;
+}
+
+.navbar-cerrar-sesion:hover {
+    background: #ffffff;
+    color: #1565c0;
+}
+
+@media (max-width: 650px) {
+    .navbar {
+        padding: 10px 16px;
+    }
+
+    .navbar-logo {
+        font-size: 19px;
+    }
+
+    .navbar-avatar,
+    .navbar-datos {
+        display: none;
+    }
+
+    .navbar-cerrar-sesion {
+        margin-left: 0;
+        padding: 8px 10px;
+    }
+}

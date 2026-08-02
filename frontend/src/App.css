@@ -1,0 +1,287 @@
+body{
+    margin:0;
+    background:#f4f6f9;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+.contenedor{
+
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+
+    min-height:100vh;
+
+    padding:30px;
+
+}
+
+.card{
+
+    width:95%;
+    max-width:1200px;
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:30px;
+
+    box-shadow:0px 5px 20px rgba(0,0,0,.15);
+
+}
+
+h1{
+
+    color:#0B5394;
+
+    margin-bottom:10px;
+
+}
+
+h2{
+
+    color:#0B5394;
+
+}
+
+h3{
+
+    color:#555;
+
+    font-weight:400;
+
+}
+
+button{
+
+    background:#0B5394;
+
+    color:white;
+
+    border:none;
+
+    padding:12px 25px;
+
+    border-radius:8px;
+
+    font-size:16px;
+
+    cursor:pointer;
+
+    margin:5px;
+
+}
+
+button:hover{
+
+    background:#063970;
+
+}
+
+.cards{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:20px;
+
+    flex-wrap:wrap;
+
+    margin-bottom:20px;
+
+}
+
+.cardDashboard{
+
+    width:180px;
+
+    background:#0B5394;
+
+    color:white;
+
+    border-radius:10px;
+
+    padding:20px;
+
+    text-align:center;
+
+    box-shadow:0px 3px 10px rgba(0,0,0,.15);
+
+}
+
+.cardDashboard h2{
+
+    color:white;
+
+    margin:0;
+
+    font-size:32px;
+
+}
+
+.cardDashboard p{
+
+    margin-top:10px;
+
+    font-size:16px;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:20px;
+
+    font-size:14px;
+
+}
+
+table th{
+
+    background:#0B5394;
+
+    color:white;
+
+    padding:10px;
+
+    border:1px solid #ddd;
+
+}
+
+table td{
+
+    padding:8px;
+
+    border:1px solid #ddd;
+
+    text-align:center;
+
+}
+
+table tr:nth-child(even){
+
+    background:#f8f8f8;
+
+}
+
+table tr:hover{
+
+    background:#e9f3ff;
+
+}
+
+input[type="file"]{
+
+    margin-top:15px;
+
+}
+
+hr{
+
+    margin:30px 0;
+
+}
+/*=========================
+LAYOUT
+=========================*/
+
+.layout{
+
+    background:#F4F6F9;
+
+    min-height:100vh;
+
+}
+
+.contenido{
+
+    display:flex;
+
+}
+
+.principal{
+
+    flex:1;
+
+    padding:30px;
+
+}
+
+/*=========================
+CARD
+=========================*/
+
+.card{
+
+    width:100%;
+
+    max-width:none;
+
+    background:white;
+
+    border-radius:12px;
+
+    padding:30px;
+
+    box-shadow:0 5px 20px rgba(0,0,0,.08);
+
+}
+.filtros{
+
+    display:flex;
+
+    gap:15px;
+
+    margin-bottom:20px;
+
+}
+
+.filtros input,
+.filtros select{
+
+    padding:10px;
+
+    border-radius:6px;
+
+    border:1px solid #ccc;
+
+}
+
+.tabla{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+.tabla th{
+
+    background:#0B5394;
+
+    color:white;
+
+    padding:12px;
+
+}
+
+.tabla td{
+
+    padding:10px;
+
+    border-bottom:1px solid #ddd;
+
+    text-align:center;
+
+}
+
+.tabla tr:hover{
+
+    background:#f5f5f5;
+
+}
