@@ -6,11 +6,21 @@ const reporteController = require(
     "../controllers/reporteController"
 );
 
-// ===============================
-// REPORTE GENERAL
-// ===============================
+const {
+    autorizarRoles
+} = require(
+    "../middlewares/authMiddleware"
+);
+
+// Todos los roles pueden consultar reportes.
 router.get(
     "/general",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador",
+        "Supervisor",
+        "Consulta"
+    ),
     reporteController.listarReporteGeneral
 );
 

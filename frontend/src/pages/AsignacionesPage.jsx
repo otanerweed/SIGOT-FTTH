@@ -10,19 +10,32 @@ import {
     obtenerAsignaciones
 } from "../services/asignacionesService";
 
+import {
+    obtenerUsuario
+} from "../services/authService";
+
 import "./AsignacionesPage.css";
 
 const REGISTROS_POR_PAGINA = 10;
 
 function AsignacionesPage() {
+    const usuario = obtenerUsuario();
+
+    const puedeEjecutarAsignacion = [
+        "Administrador",
+        "Coordinador"
+    ].includes(usuario?.Rol || "");
+
     const [asignaciones, setAsignaciones] =
         useState([]);
 
     const [busqueda, setBusqueda] =
         useState("");
 
-    const [estadoSeleccionado, setEstadoSeleccionado] =
-        useState("TODOS");
+    const [
+        estadoSeleccionado,
+        setEstadoSeleccionado
+    ] = useState("TODOS");
 
     const [paginaActual, setPaginaActual] =
         useState(1);
@@ -42,6 +55,9 @@ function AsignacionesPage() {
     const [resumenProceso, setResumenProceso] =
         useState(null);
 
+    // =====================================
+    // CARGAR ASIGNACIONES
+    // =====================================
     const cargarAsignaciones =
         useCallback(async () => {
             try {
@@ -56,14 +72,14 @@ function AsignacionesPage() {
                         ? data
                         : []
                 );
-            } catch (error) {
+            } catch (errorPeticion) {
                 console.error(
                     "Error al cargar asignaciones:",
-                    error
+                    errorPeticion
                 );
 
                 setError(
-                    error.response?.data?.mensaje ||
+                    errorPeticion.response?.data?.mensaje ||
                         "No se pudieron cargar las asignaciones."
                 );
             } finally {
@@ -75,6 +91,9 @@ function AsignacionesPage() {
         cargarAsignaciones();
     }, [cargarAsignaciones]);
 
+    // =====================================
+    // FUNCIONES AUXILIARES
+    // =====================================
     function obtenerTexto(valor) {
         return String(valor ?? "").trim();
     }
@@ -154,7 +173,18 @@ function AsignacionesPage() {
         return "estado-neutro";
     }
 
+    // =====================================
+    // EJECUTAR ASIGNACIÓN AUTOMÁTICA
+    // =====================================
     async function ejecutarAsignacion() {
+        if (!puedeEjecutarAsignacion) {
+            setError(
+                "No tiene permisos para ejecutar la asignación automática."
+            );
+
+            return;
+        }
+
         const confirmado = window.confirm(
             "¿Desea ejecutar la asignación automática de las órdenes sin asignar?"
         );
@@ -182,14 +212,14 @@ function AsignacionesPage() {
             );
 
             await cargarAsignaciones();
-        } catch (error) {
+        } catch (errorPeticion) {
             console.error(
                 "Error al ejecutar la asignación automática:",
-                error
+                errorPeticion
             );
 
             setError(
-                error.response?.data?.mensaje ||
+                errorPeticion.response?.data?.mensaje ||
                     "No se pudo ejecutar la asignación automática."
             );
         } finally {
@@ -197,6 +227,9 @@ function AsignacionesPage() {
         }
     }
 
+    // =====================================
+    // ESTADOS DISPONIBLES
+    // =====================================
     const estadosDisponibles =
         useMemo(() => {
             const estados = asignaciones
@@ -212,6 +245,9 @@ function AsignacionesPage() {
             ].sort();
         }, [asignaciones]);
 
+    // =====================================
+    // FILTRAR ASIGNACIONES
+    // =====================================
     const asignacionesFiltradas =
         useMemo(() => {
             const textoBusqueda = busqueda
@@ -274,6 +310,9 @@ function AsignacionesPage() {
         estadoSeleccionado
     ]);
 
+    // =====================================
+    // RESUMEN DE ASIGNACIONES
+    // =====================================
     const totalActivas =
         asignaciones.filter(
             (asignacion) =>
@@ -300,6 +339,9 @@ function AsignacionesPage() {
                 "CANCELADA"
         ).length;
 
+    // =====================================
+    // PAGINACIÓN
+    // =====================================
     const totalPaginas = Math.max(
         1,
         Math.ceil(
@@ -343,9 +385,9 @@ function AsignacionesPage() {
                     <h1>Asignaciones</h1>
 
                     <p>
-                        Consulte las órdenes asignadas
-                        a los técnicos y ejecute el
-                        proceso automático.
+                        {puedeEjecutarAsignacion
+                            ? "Consulte las órdenes asignadas y ejecute el proceso automático."
+                            : "Consulte las órdenes asignadas a los técnicos."}
                     </p>
                 </div>
 
@@ -366,21 +408,23 @@ function AsignacionesPage() {
                             : "Actualizar"}
                     </button>
 
-                    <button
-                        type="button"
-                        className="boton-asignacion-automatica"
-                        onClick={
-                            ejecutarAsignacion
-                        }
-                        disabled={
-                            ejecutando ||
-                            cargando
-                        }
-                    >
-                        {ejecutando
-                            ? "Asignando..."
-                            : "Ejecutar asignación automática"}
-                    </button>
+                    {puedeEjecutarAsignacion && (
+                        <button
+                            type="button"
+                            className="boton-asignacion-automatica"
+                            onClick={
+                                ejecutarAsignacion
+                            }
+                            disabled={
+                                ejecutando ||
+                                cargando
+                            }
+                        >
+                            {ejecutando
+                                ? "Asignando..."
+                                : "Ejecutar asignación automática"}
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -396,59 +440,60 @@ function AsignacionesPage() {
                 </div>
             )}
 
-            {resumenProceso && (
-                <div className="resultado-proceso">
-                    <h3>
-                        Resultado de la asignación
-                    </h3>
+            {resumenProceso &&
+                puedeEjecutarAsignacion && (
+                    <div className="resultado-proceso">
+                        <h3>
+                            Resultado de la asignación
+                        </h3>
 
-                    <div className="resultado-grid">
-                        <div>
-                            <span>
-                                Asignadas
-                            </span>
+                        <div className="resultado-grid">
+                            <div>
+                                <span>
+                                    Asignadas
+                                </span>
 
-                            <strong>
-                                {resumenProceso.totalAsignadas ??
-                                    0}
-                            </strong>
-                        </div>
+                                <strong>
+                                    {resumenProceso.totalAsignadas ??
+                                        0}
+                                </strong>
+                            </div>
 
-                        <div>
-                            <span>
-                                Sin técnico
-                            </span>
+                            <div>
+                                <span>
+                                    Sin técnico
+                                </span>
 
-                            <strong>
-                                {resumenProceso.sinTecnicoDisponible ??
-                                    0}
-                            </strong>
-                        </div>
+                                <strong>
+                                    {resumenProceso.sinTecnicoDisponible ??
+                                        0}
+                                </strong>
+                            </div>
 
-                        <div>
-                            <span>
-                                Sin agenda
-                            </span>
+                            <div>
+                                <span>
+                                    Sin agenda
+                                </span>
 
-                            <strong>
-                                {resumenProceso.sinFechaOHorario ??
-                                    0}
-                            </strong>
-                        </div>
+                                <strong>
+                                    {resumenProceso.sinFechaOHorario ??
+                                        0}
+                                </strong>
+                            </div>
 
-                        <div>
-                            <span>
-                                Errores
-                            </span>
+                            <div>
+                                <span>
+                                    Errores
+                                </span>
 
-                            <strong>
-                                {resumenProceso.totalErrores ??
-                                    0}
-                            </strong>
+                                <strong>
+                                    {resumenProceso.totalErrores ??
+                                        0}
+                                </strong>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
             <div className="resumen-asignaciones">
                 <div className="tarjeta-resumen">

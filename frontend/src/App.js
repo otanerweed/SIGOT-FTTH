@@ -7,6 +7,7 @@ import {
 
 import MainLayout from "./layouts/MainLayout";
 import RutaProtegida from "./components/RutaProtegida";
+import RutaPorRol from "./components/RutaPorRol";
 
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -27,7 +28,7 @@ function App() {
                     element={<LoginPage />}
                 />
 
-                {/* Rutas protegidas */}
+                {/* Rutas que requieren sesión */}
                 <Route element={<RutaProtegida />}>
                     <Route
                         path="/"
@@ -40,7 +41,16 @@ function App() {
 
                         <Route
                             path="importar"
-                            element={<ImportarPage />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador"
+                                    ]}
+                                >
+                                    <ImportarPage />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route
@@ -50,17 +60,46 @@ function App() {
 
                         <Route
                             path="tecnicos"
-                            element={<Tecnicos />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador"
+                                    ]}
+                                >
+                                    <Tecnicos />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route
                             path="asignaciones"
-                            element={<AsignacionesPage />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <AsignacionesPage />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route
                             path="mapa"
-                            element={<Mapa />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <Mapa />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route

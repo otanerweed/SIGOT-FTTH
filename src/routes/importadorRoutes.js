@@ -2,26 +2,54 @@ const express = require("express");
 
 const router = express.Router();
 
-const upload = require("../middlewares/uploadExcel");
+const upload = require(
+    "../middlewares/uploadExcel"
+);
 
 const {
     importarOFSC
-} = require("../controllers/importadorController");
+} = require(
+    "../controllers/importadorController"
+);
 
 const {
     listarOrdenes
-} = require("../controllers/ordenesController");
+} = require(
+    "../controllers/ordenesController"
+);
 
-// Importar Excel
+const {
+    autorizarRoles
+} = require(
+    "../middlewares/authMiddleware"
+);
+
+// =====================================
+// IMPORTAR EXCEL
+// ADMINISTRADOR Y COORDINADOR
+// =====================================
 router.post(
     "/ofsc",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
     upload.single("archivo"),
     importarOFSC
 );
 
-// Obtener órdenes
+// =====================================
+// CONSULTAR ÓRDENES
+// TODOS LOS ROLES AUTENTICADOS
+// =====================================
 router.get(
     "/ordenes",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador",
+        "Supervisor",
+        "Consulta"
+    ),
     listarOrdenes
 );
 

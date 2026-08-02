@@ -6,23 +6,42 @@ const app = express();
 // =====================================
 // RUTAS
 // =====================================
-const authRoutes = require("./routes/authRoutes");
-const importadorRoutes = require("./routes/importadorRoutes");
-const ordenesRoutes = require("./routes/ordenesRoutes");
-const tecnicosRoutes = require("./routes/tecnicoRoutes");
-const asignacionRoutes = require("./routes/asignacionRoutes");
-const dashboardRoutes = require("./routes/dashboardRoutes");
-const asignacionesListadoRoutes = require(
-    "./routes/asignacionesListadoRoutes"
+const authRoutes = require(
+    "./routes/authRoutes"
 );
-const reporteRoutes = require("./routes/reporteRoutes");
+
+const importadorRoutes = require(
+    "./routes/importadorRoutes"
+);
+
+const ordenesRoutes = require(
+    "./routes/ordenesRoutes"
+);
+
+const tecnicosRoutes = require(
+    "./routes/tecnicoRoutes"
+);
+
+const asignacionRoutes = require(
+    "./routes/asignacionRoutes"
+);
+
+const dashboardRoutes = require(
+    "./routes/dashboardRoutes"
+);
+
+const reporteRoutes = require(
+    "./routes/reporteRoutes"
+);
 
 // =====================================
 // MIDDLEWARE DE AUTENTICACIÓN
 // =====================================
 const {
     verificarToken
-} = require("./middlewares/authMiddleware");
+} = require(
+    "./middlewares/authMiddleware"
+);
 
 // =====================================
 // MIDDLEWARES GENERALES
@@ -37,14 +56,18 @@ app.get("/", (req, res) => {
     res.json({
         sistema: "SIGOT-FTTH",
         version: "1.0",
-        mensaje: "API funcionando correctamente"
+        mensaje:
+            "API funcionando correctamente"
     });
 });
 
 // =====================================
 // AUTENTICACIÓN PÚBLICA
 // =====================================
-app.use("/api/auth", authRoutes);
+app.use(
+    "/api/auth",
+    authRoutes
+);
 
 /*
  * Todas las rutas registradas después
@@ -55,36 +78,49 @@ app.use(verificarToken);
 // =====================================
 // IMPORTADOR
 // =====================================
-app.use("/api/importador", importadorRoutes);
+app.use(
+    "/api/importador",
+    importadorRoutes
+);
 
 // =====================================
 // ÓRDENES
 // =====================================
-app.use("/api/ordenes", ordenesRoutes);
+app.use(
+    "/api/ordenes",
+    ordenesRoutes
+);
 
 // =====================================
 // TÉCNICOS
 // =====================================
-app.use("/api/tecnicos", tecnicosRoutes);
+app.use(
+    "/api/tecnicos",
+    tecnicosRoutes
+);
 
 // =====================================
 // ASIGNACIONES
 // =====================================
-app.use("/api/asignaciones", asignacionRoutes);
-
 app.use(
     "/api/asignaciones",
-    asignacionesListadoRoutes
+    asignacionRoutes
 );
 
 // =====================================
 // DASHBOARD
 // =====================================
-app.use("/api/dashboard", dashboardRoutes);
+app.use(
+    "/api/dashboard",
+    dashboardRoutes
+);
 
 // =====================================
 // REPORTES
 // =====================================
-app.use("/api/reportes", reporteRoutes);
+app.use(
+    "/api/reportes",
+    reporteRoutes
+);
 
 module.exports = app;

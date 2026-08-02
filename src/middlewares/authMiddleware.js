@@ -45,10 +45,6 @@ function verificarToken(req, res, next) {
             process.env.JWT_SECRET
         );
 
-        /*
-         * Los datos del usuario autenticado
-         * quedan disponibles en las rutas.
-         */
         req.usuario = datosUsuario;
 
         next();
@@ -69,6 +65,41 @@ function verificarToken(req, res, next) {
     }
 }
 
+// =====================================
+// AUTORIZAR ROLES
+// =====================================
+function autorizarRoles(...rolesPermitidos) {
+    return (req, res, next) => {
+        if (!req.usuario) {
+            return res.status(401).json({
+                ok: false,
+                mensaje:
+                    "Debe iniciar sesión para acceder."
+            });
+        }
+
+        const rolUsuario = String(
+            req.usuario.rol || ""
+        ).trim();
+
+        const autorizado =
+            rolesPermitidos.includes(
+                rolUsuario
+            );
+
+        if (!autorizado) {
+            return res.status(403).json({
+                ok: false,
+                mensaje:
+                    "No tiene permisos para realizar esta acción."
+            });
+        }
+
+        next();
+    };
+}
+
 module.exports = {
-    verificarToken
+    verificarToken,
+    autorizarRoles
 };
