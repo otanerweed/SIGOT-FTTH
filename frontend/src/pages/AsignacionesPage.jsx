@@ -7,7 +7,9 @@ import {
 
 import {
     ejecutarAsignacionAutomatica,
-    obtenerAsignaciones
+    ejecutarAsignacionManual,
+    obtenerAsignaciones,
+    obtenerOpcionesAsignacionManual
 } from "../services/asignacionesService";
 
 import {
@@ -17,6 +19,98 @@ import {
 import "./AsignacionesPage.css";
 
 const REGISTROS_POR_PAGINA = 10;
+
+// =====================================
+// FUNCIONES AUXILIARES
+// =====================================
+function obtenerTexto(valor) {
+    return String(valor ?? "").trim();
+}
+
+function normalizarTexto(valor) {
+    return obtenerTexto(valor)
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .toUpperCase();
+}
+
+function mostrarEstado(estado) {
+    return obtenerTexto(estado)
+        .replaceAll("_", " ");
+}
+
+function formatearFecha(valor) {
+    if (!valor) {
+        return "Sin fecha";
+    }
+
+    const fecha = new Date(valor);
+
+    if (Number.isNaN(fecha.getTime())) {
+        return obtenerTexto(valor);
+    }
+
+    return fecha.toLocaleDateString(
+        "es-PE",
+        {
+            timeZone: "UTC"
+        }
+    );
+}
+
+function formatearFechaHora(valor) {
+    if (!valor) {
+        return "Sin registro";
+    }
+
+    const fecha = new Date(valor);
+
+    if (Number.isNaN(fecha.getTime())) {
+        return obtenerTexto(valor);
+    }
+
+    return fecha.toLocaleString(
+        "es-PE"
+    );
+}
+
+function obtenerClaseEstado(estado) {
+    const valor =
+        normalizarTexto(estado);
+
+    if (
+        valor === "ACTIVA" ||
+        valor === "ASIGNADA"
+    ) {
+        return "estado-activa";
+    }
+
+    if (
+        valor === "FINALIZADA" ||
+        valor === "FINALIZADO"
+    ) {
+        return "estado-finalizada";
+    }
+
+    if (
+        valor === "CANCELADA" ||
+        valor === "CANCELADO"
+    ) {
+        return "estado-cancelada";
+    }
+
+    if (
+        valor === "PENDIENTE" ||
+        valor === "SIN ASIGNAR"
+    ) {
+        return "estado-pendiente";
+    }
+
+    return "estado-neutro";
+}
 
 function AsignacionesPage() {
     const usuario = obtenerUsuario();
@@ -56,6 +150,47 @@ function AsignacionesPage() {
         useState(null);
 
     // =====================================
+    // ASIGNACIÓN MANUAL
+    // =====================================
+    const [
+        modalManualAbierto,
+        setModalManualAbierto
+    ] = useState(false);
+
+    const [
+        cargandoOpciones,
+        setCargandoOpciones
+    ] = useState(false);
+
+    const [
+        guardandoManual,
+        setGuardandoManual
+    ] = useState(false);
+
+    const [
+        opcionesManuales,
+        setOpcionesManuales
+    ] = useState({
+        ordenes: [],
+        tecnicos: []
+    });
+
+    const [
+        idOrdenManual,
+        setIdOrdenManual
+    ] = useState("");
+
+    const [
+        idTecnicoManual,
+        setIdTecnicoManual
+    ] = useState("");
+
+    const [
+        errorManual,
+        setErrorManual
+    ] = useState("");
+
+    // =====================================
     // CARGAR ASIGNACIONES
     // =====================================
     const cargarAsignaciones =
@@ -90,88 +225,6 @@ function AsignacionesPage() {
     useEffect(() => {
         cargarAsignaciones();
     }, [cargarAsignaciones]);
-
-    // =====================================
-    // FUNCIONES AUXILIARES
-    // =====================================
-    function obtenerTexto(valor) {
-        return String(valor ?? "").trim();
-    }
-
-    function mostrarEstado(estado) {
-        return obtenerTexto(estado)
-            .replaceAll("_", " ");
-    }
-
-    function formatearFecha(valor) {
-        if (!valor) {
-            return "Sin fecha";
-        }
-
-        const fecha = new Date(valor);
-
-        if (Number.isNaN(fecha.getTime())) {
-            return obtenerTexto(valor);
-        }
-
-        return fecha.toLocaleDateString(
-            "es-PE",
-            {
-                timeZone: "UTC"
-            }
-        );
-    }
-
-    function formatearFechaHora(valor) {
-        if (!valor) {
-            return "Sin registro";
-        }
-
-        const fecha = new Date(valor);
-
-        if (Number.isNaN(fecha.getTime())) {
-            return obtenerTexto(valor);
-        }
-
-        return fecha.toLocaleString(
-            "es-PE"
-        );
-    }
-
-    function obtenerClaseEstado(estado) {
-        const valor = obtenerTexto(estado)
-            .toUpperCase();
-
-        if (
-            valor === "ACTIVA" ||
-            valor === "ASIGNADA"
-        ) {
-            return "estado-activa";
-        }
-
-        if (
-            valor === "FINALIZADA" ||
-            valor === "FINALIZADO"
-        ) {
-            return "estado-finalizada";
-        }
-
-        if (
-            valor === "CANCELADA" ||
-            valor === "CANCELADO"
-        ) {
-            return "estado-cancelada";
-        }
-
-        if (
-            valor === "PENDIENTE" ||
-            valor === "SIN ASIGNAR"
-        ) {
-            return "estado-pendiente";
-        }
-
-        return "estado-neutro";
-    }
 
     // =====================================
     // EJECUTAR ASIGNACIÓN AUTOMÁTICA
@@ -228,15 +281,205 @@ function AsignacionesPage() {
     }
 
     // =====================================
+    // ABRIR ASIGNACIÓN MANUAL
+    // =====================================
+    async function abrirAsignacionManual() {
+        if (!puedeEjecutarAsignacion) {
+            setError(
+                "No tiene permisos para realizar asignaciones manuales."
+            );
+
+            return;
+        }
+
+        try {
+            setModalManualAbierto(true);
+            setCargandoOpciones(true);
+            setErrorManual("");
+            setIdOrdenManual("");
+            setIdTecnicoManual("");
+
+            const respuesta =
+                await obtenerOpcionesAsignacionManual();
+
+            setOpcionesManuales({
+                ordenes:
+                    Array.isArray(
+                        respuesta?.ordenes
+                    )
+                        ? respuesta.ordenes
+                        : [],
+
+                tecnicos:
+                    Array.isArray(
+                        respuesta?.tecnicos
+                    )
+                        ? respuesta.tecnicos
+                        : []
+            });
+        } catch (errorPeticion) {
+            console.error(
+                "Error al cargar opciones manuales:",
+                errorPeticion
+            );
+
+            setErrorManual(
+                errorPeticion.response?.data?.mensaje ||
+                    "No se pudieron cargar las órdenes y técnicos disponibles."
+            );
+        } finally {
+            setCargandoOpciones(false);
+        }
+    }
+
+    function cerrarAsignacionManual() {
+        if (guardandoManual) {
+            return;
+        }
+
+        setModalManualAbierto(false);
+        setErrorManual("");
+        setIdOrdenManual("");
+        setIdTecnicoManual("");
+    }
+
+    async function guardarAsignacionManual(
+        evento
+    ) {
+        evento.preventDefault();
+
+        const idOrden = Number(
+            idOrdenManual
+        );
+
+        const idTecnico = Number(
+            idTecnicoManual
+        );
+
+        if (
+            !Number.isInteger(idOrden) ||
+            idOrden <= 0
+        ) {
+            setErrorManual(
+                "Debe seleccionar una orden."
+            );
+
+            return;
+        }
+
+        if (
+            !Number.isInteger(idTecnico) ||
+            idTecnico <= 0
+        ) {
+            setErrorManual(
+                "Debe seleccionar un técnico."
+            );
+
+            return;
+        }
+
+        try {
+            setGuardandoManual(true);
+            setErrorManual("");
+            setMensaje("");
+            setError("");
+            setResumenProceso(null);
+
+            const respuesta =
+                await ejecutarAsignacionManual(
+                    idOrden,
+                    idTecnico
+                );
+
+            setMensaje(
+                respuesta.mensaje ||
+                    "La asignación manual fue registrada correctamente."
+            );
+
+            setModalManualAbierto(false);
+            setIdOrdenManual("");
+            setIdTecnicoManual("");
+
+            await cargarAsignaciones();
+        } catch (errorPeticion) {
+            console.error(
+                "Error al registrar la asignación manual:",
+                errorPeticion
+            );
+
+            setErrorManual(
+                errorPeticion.response?.data?.mensaje ||
+                    "No se pudo registrar la asignación manual."
+            );
+        } finally {
+            setGuardandoManual(false);
+        }
+    }
+
+    // =====================================
+    // OPCIONES VÁLIDAS DEL MODAL
+    // =====================================
+    const ordenesManualesDisponibles =
+        useMemo(() => {
+            return opcionesManuales.ordenes.filter(
+                (orden) =>
+                    Boolean(
+                        orden.FechaAgenda
+                    ) &&
+                    Boolean(
+                        obtenerTexto(
+                            orden.Horario
+                        )
+                    )
+            );
+        }, [opcionesManuales.ordenes]);
+
+    const ordenesSinAgenda =
+        opcionesManuales.ordenes.length -
+        ordenesManualesDisponibles.length;
+
+    const ordenManualSeleccionada =
+        useMemo(() => {
+            return opcionesManuales.ordenes.find(
+                (orden) =>
+                    Number(
+                        orden.IdOrden
+                    ) ===
+                    Number(
+                        idOrdenManual
+                    )
+            ) || null;
+        }, [
+            opcionesManuales.ordenes,
+            idOrdenManual
+        ]);
+
+    const tecnicoManualSeleccionado =
+        useMemo(() => {
+            return opcionesManuales.tecnicos.find(
+                (tecnico) =>
+                    Number(
+                        tecnico.IdTecnico
+                    ) ===
+                    Number(
+                        idTecnicoManual
+                    )
+            ) || null;
+        }, [
+            opcionesManuales.tecnicos,
+            idTecnicoManual
+        ]);
+
+    // =====================================
     // ESTADOS DISPONIBLES
     // =====================================
     const estadosDisponibles =
         useMemo(() => {
             const estados = asignaciones
                 .map((asignacion) =>
-                    obtenerTexto(
+                    normalizarTexto(
                         asignacion.EstadoAsignacion
-                    ).toUpperCase()
+                    )
                 )
                 .filter(Boolean);
 
@@ -250,16 +493,17 @@ function AsignacionesPage() {
     // =====================================
     const asignacionesFiltradas =
         useMemo(() => {
-            const textoBusqueda = busqueda
-                .trim()
-                .toLowerCase();
+            const textoBusqueda =
+                busqueda
+                    .trim()
+                    .toLowerCase();
 
             return asignaciones.filter(
                 (asignacion) => {
                     const estado =
-                        obtenerTexto(
+                        normalizarTexto(
                             asignacion.EstadoAsignacion
-                        ).toUpperCase();
+                        );
 
                     const cumpleEstado =
                         estadoSeleccionado ===
@@ -314,32 +558,30 @@ function AsignacionesPage() {
     ]);
 
     // =====================================
-    // RESUMEN DE ASIGNACIONES
+    // RESUMEN
     // =====================================
     const totalActivas =
         asignaciones.filter(
             (asignacion) =>
-                obtenerTexto(
+                normalizarTexto(
                     asignacion.EstadoAsignacion
-                ).toUpperCase() === "ACTIVA"
+                ) === "ACTIVA"
         ).length;
 
     const totalFinalizadas =
         asignaciones.filter(
             (asignacion) =>
-                obtenerTexto(
+                normalizarTexto(
                     asignacion.EstadoAsignacion
-                ).toUpperCase() ===
-                "FINALIZADA"
+                ) === "FINALIZADA"
         ).length;
 
     const totalCanceladas =
         asignaciones.filter(
             (asignacion) =>
-                obtenerTexto(
+                normalizarTexto(
                     asignacion.EstadoAsignacion
-                ).toUpperCase() ===
-                "CANCELADA"
+                ) === "CANCELADA"
         ).length;
 
     // =====================================
@@ -391,7 +633,7 @@ function AsignacionesPage() {
 
                     <p>
                         {puedeEjecutarAsignacion
-                            ? "Consulte las órdenes asignadas y ejecute el proceso automático."
+                            ? "Consulte las órdenes asignadas y gestione la asignación de técnicos."
                             : "Consulte las órdenes asignadas a los técnicos."}
                     </p>
                 </div>
@@ -414,21 +656,37 @@ function AsignacionesPage() {
                     </button>
 
                     {puedeEjecutarAsignacion && (
-                        <button
-                            type="button"
-                            className="boton-asignacion-automatica"
-                            onClick={
-                                ejecutarAsignacion
-                            }
-                            disabled={
-                                ejecutando ||
-                                cargando
-                            }
-                        >
-                            {ejecutando
-                                ? "Asignando..."
-                                : "Ejecutar asignación automática"}
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                className="boton-asignacion-manual"
+                                onClick={
+                                    abrirAsignacionManual
+                                }
+                                disabled={
+                                    ejecutando ||
+                                    cargando
+                                }
+                            >
+                                Asignación manual
+                            </button>
+
+                            <button
+                                type="button"
+                                className="boton-asignacion-automatica"
+                                onClick={
+                                    ejecutarAsignacion
+                                }
+                                disabled={
+                                    ejecutando ||
+                                    cargando
+                                }
+                            >
+                                {ejecutando
+                                    ? "Asignando..."
+                                    : "Asignación automática"}
+                            </button>
+                        </>
                     )}
                 </div>
             </header>
@@ -621,49 +879,17 @@ function AsignacionesPage() {
                                 <table className="tabla-asignaciones">
                                     <thead>
                                         <tr>
-                                            <th>
-                                                OT
-                                            </th>
-
-                                            <th>
-                                                Cliente
-                                            </th>
-
-                                            <th>
-                                                Agenda
-                                            </th>
-
-                                            <th>
-                                                Técnico
-                                            </th>
-
-                                            <th>
-                                                Tipo
-                                            </th>
-
-                                            <th>
-                                                Estado
-                                            </th>
-
-                                            <th>
-                                                Estado interno
-                                            </th>
-
-                                            <th>
-                                                Actividad OFSC
-                                            </th>
-
-                                            <th>
-                                                Responsable
-                                            </th>
-
-                                            <th>
-                                                Rol
-                                            </th>
-
-                                            <th>
-                                                Fecha asignación
-                                            </th>
+                                            <th>OT</th>
+                                            <th>Cliente</th>
+                                            <th>Agenda</th>
+                                            <th>Técnico</th>
+                                            <th>Tipo</th>
+                                            <th>Estado</th>
+                                            <th>Estado interno</th>
+                                            <th>Actividad OFSC</th>
+                                            <th>Responsable</th>
+                                            <th>Rol</th>
+                                            <th>Fecha asignación</th>
                                         </tr>
                                     </thead>
 
@@ -896,6 +1122,302 @@ function AsignacionesPage() {
                         </>
                     )}
             </div>
+
+            {modalManualAbierto && (
+                <div
+                    className="modal-asignacion-fondo"
+                    role="presentation"
+                    onMouseDown={(evento) => {
+                        if (
+                            evento.target ===
+                            evento.currentTarget
+                        ) {
+                            cerrarAsignacionManual();
+                        }
+                    }}
+                >
+                    <div
+                        className="modal-asignacion"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="titulo-asignacion-manual"
+                    >
+                        <div className="modal-asignacion-encabezado">
+                            <div>
+                                <h2 id="titulo-asignacion-manual">
+                                    Asignación manual
+                                </h2>
+
+                                <p>
+                                    Seleccione una orden pendiente y el técnico responsable.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="boton-cerrar-modal"
+                                onClick={
+                                    cerrarAsignacionManual
+                                }
+                                disabled={
+                                    guardandoManual
+                                }
+                                aria-label="Cerrar"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {cargandoOpciones ? (
+                            <div className="estado-modal-asignacion">
+                                Cargando órdenes y técnicos...
+                            </div>
+                        ) : (
+                            <form
+                                onSubmit={
+                                    guardarAsignacionManual
+                                }
+                            >
+                                {errorManual && (
+                                    <div className="mensaje-modal-error">
+                                        {errorManual}
+                                    </div>
+                                )}
+
+                                <div className="campo-modal-asignacion">
+                                    <label htmlFor="orden-manual">
+                                        Orden pendiente
+                                    </label>
+
+                                    <select
+                                        id="orden-manual"
+                                        value={
+                                            idOrdenManual
+                                        }
+                                        onChange={(evento) =>
+                                            setIdOrdenManual(
+                                                evento.target.value
+                                            )
+                                        }
+                                        disabled={
+                                            guardandoManual
+                                        }
+                                    >
+                                        <option value="">
+                                            Seleccione una orden
+                                        </option>
+
+                                        {ordenesManualesDisponibles.map(
+                                            (orden) => (
+                                                <option
+                                                    key={
+                                                        orden.IdOrden
+                                                    }
+                                                    value={
+                                                        orden.IdOrden
+                                                    }
+                                                >
+                                                    OT{" "}
+                                                    {
+                                                        orden.CodigoOT
+                                                    }
+                                                    {" - "}
+                                                    {orden.Cliente ||
+                                                        "Sin cliente"}
+                                                    {" - "}
+                                                    {formatearFecha(
+                                                        orden.FechaAgenda
+                                                    )}
+                                                    {" "}
+                                                    {orden.Horario}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+
+                                    <small>
+                                        {ordenesManualesDisponibles.length} orden(es) con fecha y horario disponibles.
+                                    </small>
+
+                                    {ordenesSinAgenda >
+                                        0 && (
+                                        <small className="aviso-modal-asignacion">
+                                            {ordenesSinAgenda} orden(es) pendientes no aparecen porque no tienen fecha u horario.
+                                        </small>
+                                    )}
+                                </div>
+
+                                {ordenManualSeleccionada && (
+                                    <div className="detalle-seleccion-manual">
+                                        <strong>
+                                            OT{" "}
+                                            {
+                                                ordenManualSeleccionada.CodigoOT
+                                            }
+                                        </strong>
+
+                                        <span>
+                                            {ordenManualSeleccionada.Cliente ||
+                                                "Sin cliente"}
+                                        </span>
+
+                                        <span>
+                                            {ordenManualSeleccionada.Direccion ||
+                                                "Sin dirección"}
+                                        </span>
+
+                                        <span>
+                                            {ordenManualSeleccionada.Distrito ||
+                                                "Sin distrito"}
+                                            {" · "}
+                                            {formatearFecha(
+                                                ordenManualSeleccionada.FechaAgenda
+                                            )}
+                                            {" · "}
+                                            {ordenManualSeleccionada.Horario}
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="campo-modal-asignacion">
+                                    <label htmlFor="tecnico-manual">
+                                        Técnico
+                                    </label>
+
+                                    <select
+                                        id="tecnico-manual"
+                                        value={
+                                            idTecnicoManual
+                                        }
+                                        onChange={(evento) =>
+                                            setIdTecnicoManual(
+                                                evento.target.value
+                                            )
+                                        }
+                                        disabled={
+                                            guardandoManual
+                                        }
+                                    >
+                                        <option value="">
+                                            Seleccione un técnico
+                                        </option>
+
+                                        {opcionesManuales.tecnicos.map(
+                                            (tecnico) => (
+                                                <option
+                                                    key={
+                                                        tecnico.IdTecnico
+                                                    }
+                                                    value={
+                                                        tecnico.IdTecnico
+                                                    }
+                                                >
+                                                    {
+                                                        tecnico.NombreCompleto
+                                                    }
+                                                    {" - "}
+                                                    {
+                                                        tecnico.CodigoTecnico
+                                                    }
+                                                    {" - "}
+                                                    {tecnico.DistritoBase ||
+                                                        "Sin distrito"}
+                                                    {" - Cap. "}
+                                                    {tecnico.CapacidadMaxima ??
+                                                        0}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+
+                                    <small>
+                                        La capacidad del técnico será validada para la fecha y turno de la OT.
+                                    </small>
+                                </div>
+
+                                {tecnicoManualSeleccionado && (
+                                    <div className="detalle-seleccion-manual">
+                                        <strong>
+                                            {
+                                                tecnicoManualSeleccionado.NombreCompleto
+                                            }
+                                        </strong>
+
+                                        <span>
+                                            Código:{" "}
+                                            {
+                                                tecnicoManualSeleccionado.CodigoTecnico
+                                            }
+                                        </span>
+
+                                        <span>
+                                            Tipo:{" "}
+                                            {tecnicoManualSeleccionado.TipoTecnico ||
+                                                "Sin tipo"}
+                                        </span>
+
+                                        <span>
+                                            Distrito base:{" "}
+                                            {tecnicoManualSeleccionado.DistritoBase ||
+                                                "Sin distrito"}
+                                            {" · Capacidad máxima: "}
+                                            {tecnicoManualSeleccionado.CapacidadMaxima ??
+                                                0}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {ordenesManualesDisponibles.length ===
+                                    0 && (
+                                    <div className="mensaje-modal-informativo">
+                                        No existen órdenes pendientes con fecha y horario para asignar.
+                                    </div>
+                                )}
+
+                                {opcionesManuales.tecnicos.length ===
+                                    0 && (
+                                    <div className="mensaje-modal-informativo">
+                                        No existen técnicos activos y disponibles.
+                                    </div>
+                                )}
+
+                                <div className="modal-asignacion-acciones">
+                                    <button
+                                        type="button"
+                                        className="boton-cancelar-manual"
+                                        onClick={
+                                            cerrarAsignacionManual
+                                        }
+                                        disabled={
+                                            guardandoManual
+                                        }
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="boton-guardar-manual"
+                                        disabled={
+                                            guardandoManual ||
+                                            !idOrdenManual ||
+                                            !idTecnicoManual ||
+                                            ordenesManualesDisponibles.length ===
+                                                0 ||
+                                            opcionesManuales.tecnicos.length ===
+                                                0
+                                        }
+                                    >
+                                        {guardandoManual
+                                            ? "Asignando..."
+                                            : "Confirmar asignación"}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

@@ -7,10 +7,34 @@ const {
     sincronizarOperacion
 } = require("./operacionService");
 
-/**
- * Busca un técnico disponible considerando
- * la carga de la misma fecha y horario de la orden.
- */
+// =====================================
+// CREAR ERROR DE NEGOCIO
+// =====================================
+function crearErrorNegocio(
+    mensaje,
+    statusCode = 400
+) {
+    const error = new Error(mensaje);
+
+    error.statusCode = statusCode;
+
+    return error;
+}
+
+// =====================================
+// VALIDAR IDENTIFICADOR
+// =====================================
+function validarId(valor) {
+    const id = Number(valor);
+
+    return Number.isInteger(id) && id > 0
+        ? id
+        : null;
+}
+
+// =====================================
+// BUSCAR TÉCNICO PARA ASIGNACIÓN AUTOMÁTICA
+// =====================================
 async function buscarTecnico(
     transaction,
     orden,
@@ -114,36 +138,502 @@ async function buscarTecnico(
     return resultado.recordset[0] || null;
 }
 
-/**
- * Asigna automáticamente las órdenes que
- * todavía se encuentran pendientes de asignación.
- *
- * El usuario responsable se obtiene del JWT
- * y se recibe desde el controlador.
- */
-async function asignarOrdenesAutomaticamente(
-    idUsuario
+// =====================================
+// OPCIONES PARA ASIGNACIÓN MANUAL
+// =====================================
+async function obtenerOpcionesAsignacionManual() {
+    const pool = await conectarDB();
+
+    const resultadoOrdenes =
+        await pool.request().query(`
+            SELECT
+                IdOrden,
+                IdOperacion,
+                CodigoOT,
+                CodigoServicio,
+                Cliente,
+                Direccion,
+                Distrito,
+                FechaAgenda,
+                Horario,
+                EstadoOT,
+                EstadoAsignacion
+
+            FROM dbo.OrdenesTrabajo
+
+            WHERE
+                EstadoAsignacion IN
+                (
+                    'PENDIENTE',
+                    'SIN ASIGNAR'
+                )
+
+            ORDER BY
+                CASE
+                    WHEN FechaAgenda IS NULL
+                    THEN 1
+                    ELSE 0
+                END,
+                FechaAgenda ASC,
+                Horario ASC,
+                CodigoOT ASC;
+        `);
+
+    const resultadoTecnicos =
+        await pool.request().query(`
+            SELECT
+                IdTecnico,
+                CodigoTecnico,
+                NombreCompleto,
+                Telefono,
+                TipoTecnico,
+                DistritoBase,
+                CapacidadMaxima,
+                Disponible,
+                Activo
+
+            FROM dbo.Tecnicos
+
+            WHERE
+                Activo = 1
+                AND Disponible = 1
+
+            ORDER BY
+                NombreCompleto ASC;
+        `);
+
+    return {
+        ordenes:
+            resultadoOrdenes.recordset,
+
+        tecnicos:
+            resultadoTecnicos.recordset
+    };
+}
+
+// =====================================
+// ASIGNACIÓN MANUAL
+// =====================================
+async function asignarOrdenManualmente(
+    idOrdenRecibido,
+    idTecnicoRecibido,
+    idUsuarioRecibido
 ) {
-    if (
-        !Number.isInteger(idUsuario) ||
-        idUsuario <= 0
-    ) {
-        throw new Error(
-            "El IdUsuario no es válido para realizar la asignación."
+    const idOrden =
+        validarId(idOrdenRecibido);
+
+    const idTecnico =
+        validarId(idTecnicoRecibido);
+
+    const idUsuario =
+        validarId(idUsuarioRecibido);
+
+    if (!idOrden) {
+        throw crearErrorNegocio(
+            "Debe seleccionar una orden válida."
         );
     }
 
-    const pool =
-        await conectarDB();
+    if (!idTecnico) {
+        throw crearErrorNegocio(
+            "Debe seleccionar un técnico válido."
+        );
+    }
 
-    /*
-     * Buscar órdenes pendientes de asignación.
-     *
-     * Se aceptan ambos estados para mantener
-     * compatibilidad con registros anteriores:
-     * - PENDIENTE
-     * - SIN ASIGNAR
-     */
+    if (!idUsuario) {
+        throw crearErrorNegocio(
+            "No se pudo identificar al usuario autenticado.",
+            401
+        );
+    }
+
+    const pool = await conectarDB();
+
+    const transaction =
+        new sql.Transaction(pool);
+
+    let transactionIniciada = false;
+
+    try {
+        await transaction.begin(
+            sql.ISOLATION_LEVEL.SERIALIZABLE
+        );
+
+        transactionIniciada = true;
+
+        // =====================================
+        // VALIDAR Y BLOQUEAR LA ORDEN
+        // =====================================
+        const resultadoOrden =
+            await new sql.Request(transaction)
+
+                .input(
+                    "IdOrden",
+                    sql.Int,
+                    idOrden
+                )
+
+                .query(`
+                    SELECT
+                        IdOrden,
+                        IdOperacion,
+                        CodigoOT,
+                        Cliente,
+                        Distrito,
+                        FechaAgenda,
+                        Horario,
+                        EstadoOT,
+                        EstadoAsignacion
+
+                    FROM dbo.OrdenesTrabajo
+                        WITH (
+                            UPDLOCK,
+                            HOLDLOCK
+                        )
+
+                    WHERE
+                        IdOrden =
+                            @IdOrden
+
+                        AND EstadoAsignacion IN
+                        (
+                            'PENDIENTE',
+                            'SIN ASIGNAR'
+                        );
+                `);
+
+        if (
+            resultadoOrden.recordset.length === 0
+        ) {
+            throw crearErrorNegocio(
+                "La orden ya fue asignada o no está disponible para asignación.",
+                409
+            );
+        }
+
+        const orden =
+            resultadoOrden.recordset[0];
+
+        if (
+            !orden.FechaAgenda ||
+            !orden.Horario
+        ) {
+            throw crearErrorNegocio(
+                "La orden debe tener fecha y horario antes de ser asignada."
+            );
+        }
+
+        // =====================================
+        // VALIDAR Y BLOQUEAR EL TÉCNICO
+        // =====================================
+        const resultadoTecnico =
+            await new sql.Request(transaction)
+
+                .input(
+                    "IdTecnico",
+                    sql.Int,
+                    idTecnico
+                )
+
+                .query(`
+                    SELECT
+                        IdTecnico,
+                        CodigoTecnico,
+                        NombreCompleto,
+                        TipoTecnico,
+                        DistritoBase,
+                        CapacidadMaxima,
+                        Disponible,
+                        Activo
+
+                    FROM dbo.Tecnicos
+                        WITH (
+                            UPDLOCK,
+                            HOLDLOCK
+                        )
+
+                    WHERE
+                        IdTecnico =
+                            @IdTecnico;
+                `);
+
+        if (
+            resultadoTecnico.recordset.length === 0
+        ) {
+            throw crearErrorNegocio(
+                "El técnico seleccionado no existe.",
+                404
+            );
+        }
+
+        const tecnico =
+            resultadoTecnico.recordset[0];
+
+        if (!tecnico.Activo) {
+            throw crearErrorNegocio(
+                "El técnico seleccionado se encuentra inactivo.",
+                409
+            );
+        }
+
+        if (!tecnico.Disponible) {
+            throw crearErrorNegocio(
+                "El técnico seleccionado no se encuentra disponible.",
+                409
+            );
+        }
+
+        // =====================================
+        // VALIDAR CAPACIDAD DEL TURNO
+        // =====================================
+        const resultadoCarga =
+            await new sql.Request(transaction)
+
+                .input(
+                    "IdTecnico",
+                    sql.Int,
+                    idTecnico
+                )
+
+                .input(
+                    "FechaAgenda",
+                    sql.Date,
+                    orden.FechaAgenda
+                )
+
+                .input(
+                    "Horario",
+                    sql.VarChar(20),
+                    orden.Horario
+                )
+
+                .query(`
+                    SELECT
+                        COUNT(*) AS CargaTurno
+
+                    FROM dbo.Asignaciones A
+
+                    INNER JOIN dbo.OrdenesTrabajo OT
+                        ON OT.IdOrden =
+                            A.IdOrden
+
+                    WHERE
+                        A.IdTecnico =
+                            @IdTecnico
+
+                        AND A.Estado =
+                            'ACTIVA'
+
+                        AND OT.EstadoAsignacion =
+                            'ASIGNADA'
+
+                        AND OT.FechaAgenda =
+                            @FechaAgenda
+
+                        AND ISNULL(
+                            OT.Horario,
+                            ''
+                        ) = ISNULL(
+                            @Horario,
+                            ''
+                        );
+                `);
+
+        const cargaTurno = Number(
+            resultadoCarga.recordset[0]
+                ?.CargaTurno ?? 0
+        );
+
+        const capacidadMaxima = Number(
+            tecnico.CapacidadMaxima ?? 0
+        );
+
+        if (
+            cargaTurno >= capacidadMaxima
+        ) {
+            throw crearErrorNegocio(
+                (
+                    `El técnico ${tecnico.NombreCompleto} ` +
+                    `ya alcanzó su capacidad máxima de ` +
+                    `${capacidadMaxima} orden(es) para ` +
+                    `la fecha y horario seleccionados.`
+                ),
+                409
+            );
+        }
+
+        // =====================================
+        // REGISTRAR ASIGNACIÓN MANUAL
+        // =====================================
+        const resultadoAsignacion =
+            await new sql.Request(transaction)
+
+                .input(
+                    "IdOrden",
+                    sql.Int,
+                    idOrden
+                )
+
+                .input(
+                    "IdTecnico",
+                    sql.Int,
+                    idTecnico
+                )
+
+                .input(
+                    "IdUsuario",
+                    sql.Int,
+                    idUsuario
+                )
+
+                .input(
+                    "Observaciones",
+                    sql.VarChar(500),
+                    (
+                        `Asignación manual realizada desde SIGOT-FTTH. ` +
+                        `Carga del técnico antes de asignar: ` +
+                        `${cargaTurno}/${capacidadMaxima}.`
+                    )
+                )
+
+                .query(`
+                    INSERT INTO dbo.Asignaciones
+                    (
+                        IdOrden,
+                        IdTecnico,
+                        FechaAsignacion,
+                        TipoAsignacion,
+                        Estado,
+                        IdUsuario,
+                        Observaciones
+                    )
+                    OUTPUT
+                        INSERTED.IdAsignacion
+                    VALUES
+                    (
+                        @IdOrden,
+                        @IdTecnico,
+                        GETDATE(),
+                        'MANUAL',
+                        'ACTIVA',
+                        @IdUsuario,
+                        @Observaciones
+                    );
+                `);
+
+        const idAsignacion =
+            resultadoAsignacion.recordset[0]
+                .IdAsignacion;
+
+        // =====================================
+        // ACTUALIZAR LA ORDEN
+        // =====================================
+        const resultadoActualizacion =
+            await new sql.Request(transaction)
+
+                .input(
+                    "IdOrden",
+                    sql.Int,
+                    idOrden
+                )
+
+                .query(`
+                    UPDATE dbo.OrdenesTrabajo
+                    SET
+                        EstadoAsignacion =
+                            'ASIGNADA',
+
+                        FechaActualizacion =
+                            GETDATE()
+
+                    WHERE
+                        IdOrden =
+                            @IdOrden
+
+                        AND EstadoAsignacion IN
+                        (
+                            'PENDIENTE',
+                            'SIN ASIGNAR'
+                        );
+                `);
+
+        if (
+            resultadoActualizacion
+                .rowsAffected[0] !== 1
+        ) {
+            throw crearErrorNegocio(
+                "La orden fue modificada por otro usuario. Actualice la pantalla y vuelva a intentarlo.",
+                409
+            );
+        }
+
+        await sincronizarOperacion(
+            transaction,
+            orden.IdOperacion
+        );
+
+        await transaction.commit();
+
+        transactionIniciada = false;
+
+        console.log(
+            (
+                `OT ${orden.CodigoOT} asignada manualmente ` +
+                `a ${tecnico.NombreCompleto} ` +
+                `por el usuario ${idUsuario}.`
+            )
+        );
+
+        return {
+            idAsignacion,
+            idOrden,
+            codigoOT:
+                orden.CodigoOT,
+            idTecnico,
+            tecnico:
+                tecnico.NombreCompleto,
+            codigoTecnico:
+                tecnico.CodigoTecnico,
+            cargaAnterior:
+                cargaTurno,
+            cargaActual:
+                cargaTurno + 1,
+            capacidadMaxima
+        };
+    } catch (error) {
+        if (transactionIniciada) {
+            try {
+                await transaction.rollback();
+            } catch (rollbackError) {
+                console.error(
+                    "Error al revertir la asignación manual:",
+                    rollbackError.message
+                );
+            }
+        }
+
+        throw error;
+    }
+}
+
+// =====================================
+// ASIGNACIÓN AUTOMÁTICA
+// =====================================
+async function asignarOrdenesAutomaticamente(
+    idUsuarioRecibido
+) {
+    const idUsuario =
+        validarId(idUsuarioRecibido);
+
+    if (!idUsuario) {
+        throw crearErrorNegocio(
+            "El IdUsuario no es válido para realizar la asignación.",
+            401
+        );
+    }
+
+    const pool = await conectarDB();
+
     const resultadoOrdenes =
         await pool.request().query(`
             SELECT
@@ -179,10 +669,6 @@ async function asignarOrdenesAutomaticamente(
         const ordenPendiente
         of resultadoOrdenes.recordset
     ) {
-        /*
-         * Una orden sin fecha o sin horario
-         * no debe asignarse automáticamente.
-         */
         if (
             !ordenPendiente.FechaAgenda ||
             !ordenPendiente.Horario
@@ -205,11 +691,6 @@ async function asignarOrdenesAutomaticamente(
             transactionIniciada =
                 true;
 
-            /*
-             * Volver a revisar y bloquear la orden.
-             * Evita que dos procesos asignen la
-             * misma OT al mismo tiempo.
-             */
             const validacionOrden =
                 await new sql.Request(transaction)
 
@@ -245,10 +726,6 @@ async function asignarOrdenesAutomaticamente(
                             );
                     `);
 
-            /*
-             * La orden pudo haber sido asignada
-             * por otro proceso durante el ciclo.
-             */
             if (
                 validacionOrden
                     .recordset
@@ -265,10 +742,6 @@ async function asignarOrdenesAutomaticamente(
             const orden =
                 validacionOrden.recordset[0];
 
-            /*
-             * Primera prioridad:
-             * técnico del mismo distrito.
-             */
             let tecnico =
                 await buscarTecnico(
                     transaction,
@@ -276,11 +749,6 @@ async function asignarOrdenesAutomaticamente(
                     true
                 );
 
-            /*
-             * Segunda prioridad:
-             * cualquier técnico disponible con
-             * menor carga en el mismo turno.
-             */
             if (!tecnico) {
                 tecnico =
                     await buscarTecnico(
@@ -290,10 +758,6 @@ async function asignarOrdenesAutomaticamente(
                     );
             }
 
-            /*
-             * Si no existe capacidad disponible,
-             * la orden permanece pendiente.
-             */
             if (!tecnico) {
                 await transaction.rollback();
 
@@ -305,10 +769,6 @@ async function asignarOrdenesAutomaticamente(
                 continue;
             }
 
-            /*
-             * Registrar la asignación utilizando
-             * el usuario autenticado.
-             */
             await new sql.Request(transaction)
 
                 .input(
@@ -352,10 +812,6 @@ async function asignarOrdenesAutomaticamente(
                     );
                 `);
 
-            /*
-             * Actualizar el estado de asignación
-             * de la orden.
-             */
             await new sql.Request(transaction)
 
                 .input(
@@ -384,10 +840,6 @@ async function asignarOrdenesAutomaticamente(
                         );
                 `);
 
-            /*
-             * Actualizar los indicadores
-             * de la operación.
-             */
             await sincronizarOperacion(
                 transaction,
                 orden.IdOperacion
@@ -408,10 +860,12 @@ async function asignarOrdenesAutomaticamente(
                     : orden.FechaAgenda;
 
             console.log(
-                `OT ${orden.CodigoOT} asignada a ` +
-                `${tecnico.NombreCompleto} ` +
-                `(${fechaAgenda} - ${orden.Horario}) ` +
-                `por el usuario ${idUsuario}`
+                (
+                    `OT ${orden.CodigoOT} asignada a ` +
+                    `${tecnico.NombreCompleto} ` +
+                    `(${fechaAgenda} - ${orden.Horario}) ` +
+                    `por el usuario ${idUsuario}`
+                )
             );
         } catch (error) {
             if (transactionIniciada) {
@@ -426,7 +880,10 @@ async function asignarOrdenesAutomaticamente(
             }
 
             console.error(
-                `Error asignando OT ${ordenPendiente.CodigoOT}:`,
+                (
+                    `Error asignando OT ` +
+                    `${ordenPendiente.CodigoOT}:`
+                ),
                 error
             );
 
@@ -454,20 +911,11 @@ async function asignarOrdenesAutomaticamente(
     };
 }
 
-/**
- * Obtiene todas las asignaciones registradas.
- *
- * Incluye:
- * - Información de la asignación.
- * - Datos principales de la OT.
- * - Técnico asignado.
- * - Actividad OFSC relacionada.
- * - Usuario responsable.
- * - Rol del usuario responsable.
- */
+// =====================================
+// LISTAR ASIGNACIONES
+// =====================================
 async function obtenerAsignaciones() {
-    const pool =
-        await conectarDB();
+    const pool = await conectarDB();
 
     const resultado =
         await pool.request().query(`
@@ -555,5 +1003,7 @@ async function obtenerAsignaciones() {
 
 module.exports = {
     obtenerAsignaciones,
+    obtenerOpcionesAsignacionManual,
+    asignarOrdenManualmente,
     asignarOrdenesAutomaticamente
 };

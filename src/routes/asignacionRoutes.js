@@ -26,6 +26,32 @@ router.get(
 );
 
 // =====================================
+// OPCIONES PARA ASIGNACIÓN MANUAL
+// =====================================
+router.get(
+    "/manual/opciones",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    asignacionController
+        .listarOpcionesManuales
+);
+
+// =====================================
+// EJECUTAR ASIGNACIÓN MANUAL
+// =====================================
+router.post(
+    "/manual",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    asignacionController
+        .ejecutarAsignacionManual
+);
+
+// =====================================
 // EJECUTAR ASIGNACIÓN AUTOMÁTICA
 // =====================================
 router.post(
@@ -34,7 +60,8 @@ router.post(
         "Administrador",
         "Coordinador"
     ),
-    asignacionController.ejecutarAsignacion
+    asignacionController
+        .ejecutarAsignacion
 );
 
 module.exports = router;
