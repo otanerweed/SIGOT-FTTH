@@ -1,9 +1,12 @@
-const express = require("express");
+const express =
+    require("express");
 
-const router = express.Router();
+const router =
+    express.Router();
 
 const {
-    listarOrdenes
+    listarOrdenes,
+    actualizarEstadoOrden
 } = require(
     "../controllers/ordenesController"
 );
@@ -14,7 +17,9 @@ const {
     "../middlewares/authMiddleware"
 );
 
-// Todos los roles pueden consultar órdenes.
+// =====================================
+// LISTAR ÓRDENES
+// =====================================
 router.get(
     "/",
     autorizarRoles(
@@ -26,4 +31,17 @@ router.get(
     listarOrdenes
 );
 
-module.exports = router;
+// =====================================
+// CAMBIAR ESTADO DE OT
+// =====================================
+router.patch(
+    "/:id/estado",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    actualizarEstadoOrden
+);
+
+module.exports =
+    router;

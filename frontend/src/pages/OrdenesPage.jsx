@@ -1,32 +1,81 @@
-import { useCallback, useEffect, useState } from "react";
-import TablaOrdenes from "../components/TablaOrdenes";
-import { obtenerOrdenes } from "../services/ordenesService";
+import {
+    useCallback,
+    useEffect,
+    useState
+} from "react";
+
+import TablaOrdenes from
+    "../components/TablaOrdenes";
+
+import {
+    obtenerOrdenes
+} from "../services/ordenesService";
+
+import {
+    obtenerUsuario
+} from "../services/authService";
+
 import "./OrdenesPage.css";
 
 function OrdenesPage() {
-    const [ordenes, setOrdenes] = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState("");
+    const usuario =
+        obtenerUsuario();
 
-    const cargarOrdenes = useCallback(async () => {
-        try {
-            setCargando(true);
-            setError("");
+    const puedeGestionarEstados = [
+        "Administrador",
+        "Coordinador"
+    ].includes(
+        usuario?.Rol || ""
+    );
 
-            const data = await obtenerOrdenes();
+    const [
+        ordenes,
+        setOrdenes
+    ] = useState([]);
 
-            setOrdenes(Array.isArray(data) ? data : []);
-        } catch (error) {
-            console.error("Error al cargar las órdenes:", error);
+    const [
+        cargando,
+        setCargando
+    ] = useState(true);
 
-            setError(
-                error.response?.data?.mensaje ||
-                "No se pudieron cargar las órdenes de trabajo."
-            );
-        } finally {
-            setCargando(false);
-        }
-    }, []);
+    const [
+        error,
+        setError
+    ] = useState("");
+
+    const cargarOrdenes =
+        useCallback(async () => {
+            try {
+                setCargando(true);
+                setError("");
+
+                const data =
+                    await obtenerOrdenes();
+
+                setOrdenes(
+                    Array.isArray(data)
+                        ? data
+                        : []
+                );
+            } catch (
+                errorPeticion
+            ) {
+                console.error(
+                    "Error al cargar las órdenes:",
+                    errorPeticion
+                );
+
+                setError(
+                    errorPeticion
+                        .response
+                        ?.data
+                        ?.mensaje ||
+                    "No se pudieron cargar las órdenes de trabajo."
+                );
+            } finally {
+                setCargando(false);
+            }
+        }, []);
 
     useEffect(() => {
         cargarOrdenes();
@@ -36,21 +85,30 @@ function OrdenesPage() {
         <section className="ordenes-page">
             <header className="ordenes-encabezado">
                 <div>
-                    <h1>Órdenes de trabajo</h1>
+                    <h1>
+                        Órdenes de trabajo
+                    </h1>
 
                     <p>
-                        Consulte las órdenes importadas desde OFSC y revise
-                        su estado de asignación.
+                        {puedeGestionarEstados
+                            ? "Consulte las órdenes importadas desde OFSC y gestione su estado operativo."
+                            : "Consulte las órdenes importadas desde OFSC y revise su estado de asignación."}
                     </p>
                 </div>
 
                 <button
                     type="button"
                     className="boton-actualizar"
-                    onClick={cargarOrdenes}
-                    disabled={cargando}
+                    onClick={
+                        cargarOrdenes
+                    }
+                    disabled={
+                        cargando
+                    }
                 >
-                    {cargando ? "Actualizando..." : "Actualizar"}
+                    {cargando
+                        ? "Actualizando..."
+                        : "Actualizar"}
                 </button>
             </header>
 
@@ -60,15 +118,27 @@ function OrdenesPage() {
                 </div>
             )}
 
-            {!cargando && error && (
-                <div className="estado-pagina estado-error">
-                    {error}
-                </div>
-            )}
+            {!cargando &&
+                error && (
+                    <div className="estado-pagina estado-error">
+                        {error}
+                    </div>
+                )}
 
-            {!cargando && !error && (
-                <TablaOrdenes ordenes={ordenes} />
-            )}
+            {!cargando &&
+                !error && (
+                    <TablaOrdenes
+                        ordenes={
+                            ordenes
+                        }
+                        puedeGestionarEstados={
+                            puedeGestionarEstados
+                        }
+                        onActualizar={
+                            cargarOrdenes
+                        }
+                    />
+                )}
         </section>
     );
 }

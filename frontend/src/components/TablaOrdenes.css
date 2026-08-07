@@ -1,6 +1,7 @@
 .ordenes-contenedor {
     width: 100%;
     padding: 22px;
+    box-sizing: border-box;
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
@@ -54,6 +55,7 @@
 .filtro-grupo input,
 .filtro-grupo select {
     width: 100%;
+    box-sizing: border-box;
     padding: 11px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
@@ -76,7 +78,7 @@
 
 .tabla-ordenes {
     width: 100%;
-    min-width: 1450px;
+    min-width: 1600px;
     border-collapse: collapse;
 }
 
@@ -172,19 +174,49 @@
     color: #7c2d12 !important;
 }
 
-.boton-detalle {
+/* =====================================
+   ACCIONES
+===================================== */
+
+.acciones-orden {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 220px;
+}
+
+.boton-detalle,
+.boton-cambiar-estado {
     padding: 8px 12px;
     border: none;
     border-radius: 7px;
-    background: #1565c0;
     color: #ffffff;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
+}
+
+.boton-detalle {
+    background: #1565c0;
 }
 
 .boton-detalle:hover {
     background: #0b5394;
+}
+
+.boton-cambiar-estado {
+    background: #0f766e;
+}
+
+.boton-cambiar-estado:hover:not(:disabled) {
+    background: #115e59;
+}
+
+.boton-cambiar-estado:disabled {
+    background: #cbd5e1;
+    color: #64748b;
+    cursor: not-allowed;
 }
 
 .sin-resultados,
@@ -199,6 +231,34 @@
     border-radius: 10px;
     box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
 }
+
+/* =====================================
+   MENSAJES
+===================================== */
+
+.mensaje-estado-ot {
+    margin-bottom: 18px;
+    padding: 13px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.mensaje-estado-exito {
+    border: 1px solid #bbf7d0;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mensaje-estado-error {
+    border: 1px solid #fecaca;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* =====================================
+   PAGINACIÓN
+===================================== */
 
 .tabla-paginacion {
     display: flex;
@@ -233,6 +293,10 @@
     cursor: not-allowed;
     opacity: 0.5;
 }
+
+/* =====================================
+   MODAL GENERAL
+===================================== */
 
 .modal-overlay {
     position: fixed;
@@ -279,6 +343,7 @@
 }
 
 .boton-cerrar {
+    flex: 0 0 auto;
     width: 38px;
     height: 38px;
     border: none;
@@ -290,8 +355,13 @@
     cursor: pointer;
 }
 
-.boton-cerrar:hover {
+.boton-cerrar:hover:not(:disabled) {
     background: #e2e8f0;
+}
+
+.boton-cerrar:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
 }
 
 .modal-contenido {
@@ -349,6 +419,174 @@
     margin-top: 14px;
 }
 
+/* =====================================
+   MODAL CAMBIO DE ESTADO
+===================================== */
+
+.modal-overlay-estado {
+    z-index: 1100;
+}
+
+.modal-cambio-estado {
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+}
+
+.formulario-cambio-estado {
+    padding: 24px;
+}
+
+.mensaje-modal-estado-error {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.estado-actual-card {
+    display: grid;
+    gap: 5px;
+    padding: 14px;
+    border: 1px solid #dbeafe;
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.estado-actual-card span {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.estado-actual-card strong {
+    color: #0f172a;
+    font-size: 17px;
+}
+
+.estado-actual-card small {
+    color: #64748b;
+}
+
+.campo-estado-ot {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.campo-estado-ot label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.campo-estado-ot select,
+.campo-estado-ot textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.campo-estado-ot textarea {
+    min-height: 105px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.campo-estado-ot select:focus,
+.campo-estado-ot textarea:focus {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.13);
+}
+
+.campo-estado-ot select:disabled,
+.campo-estado-ot textarea:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+.campo-estado-ot small {
+    color: #64748b;
+}
+
+.aviso-cambio-estado {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.aviso-finalizacion {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.acciones-cambio-estado {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.boton-volver-estado,
+.boton-confirmar-estado {
+    padding: 11px 18px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.boton-volver-estado {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.boton-volver-estado:hover:not(:disabled) {
+    background: #cbd5e1;
+}
+
+.boton-confirmar-estado {
+    background: #0f766e;
+    color: #ffffff;
+}
+
+.boton-confirmar-estado:hover:not(:disabled) {
+    background: #115e59;
+}
+
+.boton-volver-estado:disabled,
+.boton-confirmar-estado:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+/* =====================================
+   RESPONSIVE
+===================================== */
+
 @media (max-width: 800px) {
     .ordenes-filtros {
         grid-template-columns: 1fr;
@@ -371,6 +609,12 @@
     .detalle-grid {
         grid-template-columns: 1fr;
     }
+
+    .acciones-orden {
+        flex-direction: column;
+        align-items: stretch;
+        min-width: 130px;
+    }
 }
 
 @media (max-width: 520px) {
@@ -384,10 +628,12 @@
 
     .modal-overlay {
         padding: 10px;
+        align-items: flex-start;
     }
 
     .modal-contenido,
-    .modal-encabezado {
+    .modal-encabezado,
+    .formulario-cambio-estado {
         padding: 18px;
     }
 
@@ -395,4 +641,17 @@
         width: 100%;
         justify-content: space-between;
     }
+
+    .acciones-cambio-estado {
+        flex-direction: column-reverse;
+    }
+
+    .acciones-cambio-estado button {
+        width: 100%;
+    }
+}
+.titulo-historial-asignacion {
+    margin-top: 24px !important;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
 }
