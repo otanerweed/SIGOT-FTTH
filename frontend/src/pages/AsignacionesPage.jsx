@@ -6,10 +6,12 @@ import {
 } from "react";
 
 import {
+    cancelarAsignacion,
     ejecutarAsignacionAutomatica,
     ejecutarAsignacionManual,
     obtenerAsignaciones,
-    obtenerOpcionesAsignacionManual
+    obtenerOpcionesAsignacionManual,
+    reasignarOrden
 } from "../services/asignacionesService";
 
 import {
@@ -115,39 +117,57 @@ function obtenerClaseEstado(estado) {
 function AsignacionesPage() {
     const usuario = obtenerUsuario();
 
-    const puedeEjecutarAsignacion = [
+    const puedeGestionar = [
         "Administrador",
         "Coordinador"
-    ].includes(usuario?.Rol || "");
+    ].includes(
+        usuario?.Rol || ""
+    );
 
-    const [asignaciones, setAsignaciones] =
-        useState([]);
+    const [
+        asignaciones,
+        setAsignaciones
+    ] = useState([]);
 
-    const [busqueda, setBusqueda] =
-        useState("");
+    const [
+        busqueda,
+        setBusqueda
+    ] = useState("");
 
     const [
         estadoSeleccionado,
         setEstadoSeleccionado
     ] = useState("TODOS");
 
-    const [paginaActual, setPaginaActual] =
-        useState(1);
+    const [
+        paginaActual,
+        setPaginaActual
+    ] = useState(1);
 
-    const [cargando, setCargando] =
-        useState(true);
+    const [
+        cargando,
+        setCargando
+    ] = useState(true);
 
-    const [ejecutando, setEjecutando] =
-        useState(false);
+    const [
+        ejecutando,
+        setEjecutando
+    ] = useState(false);
 
-    const [mensaje, setMensaje] =
-        useState("");
+    const [
+        mensaje,
+        setMensaje
+    ] = useState("");
 
-    const [error, setError] =
-        useState("");
+    const [
+        error,
+        setError
+    ] = useState("");
 
-    const [resumenProceso, setResumenProceso] =
-        useState(null);
+    const [
+        resumenProceso,
+        setResumenProceso
+    ] = useState(null);
 
     // =====================================
     // ASIGNACIÓN MANUAL
@@ -191,6 +211,72 @@ function AsignacionesPage() {
     ] = useState("");
 
     // =====================================
+    // REASIGNACIÓN
+    // =====================================
+    const [
+        modalReasignarAbierto,
+        setModalReasignarAbierto
+    ] = useState(false);
+
+    const [
+        asignacionReasignar,
+        setAsignacionReasignar
+    ] = useState(null);
+
+    const [
+        idTecnicoReasignar,
+        setIdTecnicoReasignar
+    ] = useState("");
+
+    const [
+        motivoReasignar,
+        setMotivoReasignar
+    ] = useState("");
+
+    const [
+        guardandoReasignacion,
+        setGuardandoReasignacion
+    ] = useState(false);
+
+    const [
+        errorReasignacion,
+        setErrorReasignacion
+    ] = useState("");
+
+    const [
+        tecnicosReasignacion,
+        setTecnicosReasignacion
+    ] = useState([]);
+
+    // =====================================
+    // CANCELACIÓN
+    // =====================================
+    const [
+        modalCancelarAbierto,
+        setModalCancelarAbierto
+    ] = useState(false);
+
+    const [
+        asignacionCancelar,
+        setAsignacionCancelar
+    ] = useState(null);
+
+    const [
+        motivoCancelar,
+        setMotivoCancelar
+    ] = useState("");
+
+    const [
+        guardandoCancelacion,
+        setGuardandoCancelacion
+    ] = useState(false);
+
+    const [
+        errorCancelacion,
+        setErrorCancelacion
+    ] = useState("");
+
+    // =====================================
     // CARGAR ASIGNACIONES
     // =====================================
     const cargarAsignaciones =
@@ -215,7 +301,7 @@ function AsignacionesPage() {
 
                 setError(
                     errorPeticion.response?.data?.mensaje ||
-                        "No se pudieron cargar las asignaciones."
+                    "No se pudieron cargar las asignaciones."
                 );
             } finally {
                 setCargando(false);
@@ -227,10 +313,10 @@ function AsignacionesPage() {
     }, [cargarAsignaciones]);
 
     // =====================================
-    // EJECUTAR ASIGNACIÓN AUTOMÁTICA
+    // ASIGNACIÓN AUTOMÁTICA
     // =====================================
     async function ejecutarAsignacion() {
-        if (!puedeEjecutarAsignacion) {
+        if (!puedeGestionar) {
             setError(
                 "No tiene permisos para ejecutar la asignación automática."
             );
@@ -238,9 +324,10 @@ function AsignacionesPage() {
             return;
         }
 
-        const confirmado = window.confirm(
-            "¿Desea ejecutar la asignación automática de las órdenes pendientes?"
-        );
+        const confirmado =
+            window.confirm(
+                "¿Desea ejecutar la asignación automática de las órdenes pendientes?"
+            );
 
         if (!confirmado) {
             return;
@@ -257,7 +344,7 @@ function AsignacionesPage() {
 
             setMensaje(
                 respuesta.mensaje ||
-                    "Asignación automática ejecutada correctamente."
+                "Asignación automática ejecutada correctamente."
             );
 
             setResumenProceso(
@@ -273,7 +360,7 @@ function AsignacionesPage() {
 
             setError(
                 errorPeticion.response?.data?.mensaje ||
-                    "No se pudo ejecutar la asignación automática."
+                "No se pudo ejecutar la asignación automática."
             );
         } finally {
             setEjecutando(false);
@@ -281,14 +368,10 @@ function AsignacionesPage() {
     }
 
     // =====================================
-    // ABRIR ASIGNACIÓN MANUAL
+    // ASIGNACIÓN MANUAL
     // =====================================
     async function abrirAsignacionManual() {
-        if (!puedeEjecutarAsignacion) {
-            setError(
-                "No tiene permisos para realizar asignaciones manuales."
-            );
-
+        if (!puedeGestionar) {
             return;
         }
 
@@ -318,14 +401,9 @@ function AsignacionesPage() {
                         : []
             });
         } catch (errorPeticion) {
-            console.error(
-                "Error al cargar opciones manuales:",
-                errorPeticion
-            );
-
             setErrorManual(
                 errorPeticion.response?.data?.mensaje ||
-                    "No se pudieron cargar las órdenes y técnicos disponibles."
+                "No se pudieron cargar las opciones."
             );
         } finally {
             setCargandoOpciones(false);
@@ -348,13 +426,11 @@ function AsignacionesPage() {
     ) {
         evento.preventDefault();
 
-        const idOrden = Number(
-            idOrdenManual
-        );
+        const idOrden =
+            Number(idOrdenManual);
 
-        const idTecnico = Number(
-            idTecnicoManual
-        );
+        const idTecnico =
+            Number(idTecnicoManual);
 
         if (
             !Number.isInteger(idOrden) ||
@@ -393,7 +469,7 @@ function AsignacionesPage() {
 
             setMensaje(
                 respuesta.mensaje ||
-                    "La asignación manual fue registrada correctamente."
+                "La asignación manual fue registrada correctamente."
             );
 
             setModalManualAbierto(false);
@@ -402,14 +478,9 @@ function AsignacionesPage() {
 
             await cargarAsignaciones();
         } catch (errorPeticion) {
-            console.error(
-                "Error al registrar la asignación manual:",
-                errorPeticion
-            );
-
             setErrorManual(
                 errorPeticion.response?.data?.mensaje ||
-                    "No se pudo registrar la asignación manual."
+                "No se pudo registrar la asignación manual."
             );
         } finally {
             setGuardandoManual(false);
@@ -417,7 +488,249 @@ function AsignacionesPage() {
     }
 
     // =====================================
-    // OPCIONES VÁLIDAS DEL MODAL
+    // REASIGNACIÓN
+    // =====================================
+    async function abrirReasignacion(
+        asignacion
+    ) {
+        if (!puedeGestionar) {
+            return;
+        }
+
+        try {
+            setAsignacionReasignar(
+                asignacion
+            );
+
+            setModalReasignarAbierto(
+                true
+            );
+
+            setIdTecnicoReasignar("");
+            setMotivoReasignar("");
+            setErrorReasignacion("");
+            setCargandoOpciones(true);
+
+            const respuesta =
+                await obtenerOpcionesAsignacionManual();
+
+            const tecnicos =
+                Array.isArray(
+                    respuesta?.tecnicos
+                )
+                    ? respuesta.tecnicos
+                    : [];
+
+            setTecnicosReasignacion(
+                tecnicos.filter(
+                    (tecnico) =>
+                        Number(
+                            tecnico.IdTecnico
+                        ) !==
+                        Number(
+                            asignacion.IdTecnico
+                        )
+                )
+            );
+        } catch (errorPeticion) {
+            setErrorReasignacion(
+                errorPeticion.response?.data?.mensaje ||
+                "No se pudieron cargar los técnicos disponibles."
+            );
+        } finally {
+            setCargandoOpciones(false);
+        }
+    }
+
+    function cerrarReasignacion() {
+        if (guardandoReasignacion) {
+            return;
+        }
+
+        setModalReasignarAbierto(
+            false
+        );
+
+        setAsignacionReasignar(null);
+        setIdTecnicoReasignar("");
+        setMotivoReasignar("");
+        setErrorReasignacion("");
+    }
+
+    async function guardarReasignacion(
+        evento
+    ) {
+        evento.preventDefault();
+
+        const idAsignacion =
+            Number(
+                asignacionReasignar
+                    ?.IdAsignacion
+            );
+
+        const idTecnicoNuevo =
+            Number(
+                idTecnicoReasignar
+            );
+
+        const motivo =
+            motivoReasignar.trim();
+
+        if (
+            !Number.isInteger(
+                idTecnicoNuevo
+            ) ||
+            idTecnicoNuevo <= 0
+        ) {
+            setErrorReasignacion(
+                "Debe seleccionar un nuevo técnico."
+            );
+
+            return;
+        }
+
+        if (motivo.length < 5) {
+            setErrorReasignacion(
+                "El motivo debe contener al menos 5 caracteres."
+            );
+
+            return;
+        }
+
+        try {
+            setGuardandoReasignacion(
+                true
+            );
+
+            setErrorReasignacion("");
+            setMensaje("");
+            setError("");
+
+            const respuesta =
+                await reasignarOrden(
+                    idAsignacion,
+                    idTecnicoNuevo,
+                    motivo
+                );
+
+            setMensaje(
+                respuesta.mensaje ||
+                "La orden fue reasignada correctamente."
+            );
+
+            setModalReasignarAbierto(
+                false
+            );
+
+            setAsignacionReasignar(null);
+
+            await cargarAsignaciones();
+        } catch (errorPeticion) {
+            setErrorReasignacion(
+                errorPeticion.response?.data?.mensaje ||
+                "No se pudo reasignar la orden."
+            );
+        } finally {
+            setGuardandoReasignacion(
+                false
+            );
+        }
+    }
+
+    // =====================================
+    // CANCELACIÓN
+    // =====================================
+    function abrirCancelacion(
+        asignacion
+    ) {
+        if (!puedeGestionar) {
+            return;
+        }
+
+        setAsignacionCancelar(
+            asignacion
+        );
+
+        setMotivoCancelar("");
+        setErrorCancelacion("");
+
+        setModalCancelarAbierto(
+            true
+        );
+    }
+
+    function cerrarCancelacion() {
+        if (guardandoCancelacion) {
+            return;
+        }
+
+        setModalCancelarAbierto(
+            false
+        );
+
+        setAsignacionCancelar(null);
+        setMotivoCancelar("");
+        setErrorCancelacion("");
+    }
+
+    async function guardarCancelacion(
+        evento
+    ) {
+        evento.preventDefault();
+
+        const motivo =
+            motivoCancelar.trim();
+
+        if (motivo.length < 5) {
+            setErrorCancelacion(
+                "El motivo debe contener al menos 5 caracteres."
+            );
+
+            return;
+        }
+
+        try {
+            setGuardandoCancelacion(
+                true
+            );
+
+            setErrorCancelacion("");
+            setMensaje("");
+            setError("");
+
+            const respuesta =
+                await cancelarAsignacion(
+                    asignacionCancelar
+                        .IdAsignacion,
+                    motivo
+                );
+
+            setMensaje(
+                respuesta.mensaje ||
+                "La asignación fue cancelada correctamente."
+            );
+
+            setModalCancelarAbierto(
+                false
+            );
+
+            setAsignacionCancelar(null);
+
+            await cargarAsignaciones();
+        } catch (errorPeticion) {
+            setErrorCancelacion(
+                errorPeticion.response?.data?.mensaje ||
+                "No se pudo cancelar la asignación."
+            );
+        } finally {
+            setGuardandoCancelacion(
+                false
+            );
+        }
+    }
+
+    // =====================================
+    // OPCIONES DEL MODAL MANUAL
     // =====================================
     const ordenesManualesDisponibles =
         useMemo(() => {
@@ -440,15 +753,17 @@ function AsignacionesPage() {
 
     const ordenManualSeleccionada =
         useMemo(() => {
-            return opcionesManuales.ordenes.find(
-                (orden) =>
-                    Number(
-                        orden.IdOrden
-                    ) ===
-                    Number(
-                        idOrdenManual
-                    )
-            ) || null;
+            return (
+                opcionesManuales.ordenes.find(
+                    (orden) =>
+                        Number(
+                            orden.IdOrden
+                        ) ===
+                        Number(
+                            idOrdenManual
+                        )
+                ) || null
+            );
         }, [
             opcionesManuales.ordenes,
             idOrdenManual
@@ -456,41 +771,42 @@ function AsignacionesPage() {
 
     const tecnicoManualSeleccionado =
         useMemo(() => {
-            return opcionesManuales.tecnicos.find(
-                (tecnico) =>
-                    Number(
-                        tecnico.IdTecnico
-                    ) ===
-                    Number(
-                        idTecnicoManual
-                    )
-            ) || null;
+            return (
+                opcionesManuales.tecnicos.find(
+                    (tecnico) =>
+                        Number(
+                            tecnico.IdTecnico
+                        ) ===
+                        Number(
+                            idTecnicoManual
+                        )
+                ) || null
+            );
         }, [
             opcionesManuales.tecnicos,
             idTecnicoManual
         ]);
 
     // =====================================
-    // ESTADOS DISPONIBLES
+    // FILTROS
     // =====================================
     const estadosDisponibles =
         useMemo(() => {
-            const estados = asignaciones
-                .map((asignacion) =>
-                    normalizarTexto(
-                        asignacion.EstadoAsignacion
+            const estados =
+                asignaciones
+                    .map(
+                        (asignacion) =>
+                            normalizarTexto(
+                                asignacion.EstadoAsignacion
+                            )
                     )
-                )
-                .filter(Boolean);
+                    .filter(Boolean);
 
             return [
                 ...new Set(estados)
             ].sort();
         }, [asignaciones]);
 
-    // =====================================
-    // FILTRAR ASIGNACIONES
-    // =====================================
     const asignacionesFiltradas =
         useMemo(() => {
             const textoBusqueda =
@@ -587,13 +903,14 @@ function AsignacionesPage() {
     // =====================================
     // PAGINACIÓN
     // =====================================
-    const totalPaginas = Math.max(
-        1,
-        Math.ceil(
-            asignacionesFiltradas.length /
+    const totalPaginas =
+        Math.max(
+            1,
+            Math.ceil(
+                asignacionesFiltradas.length /
                 REGISTROS_POR_PAGINA
-        )
-    );
+            )
+        );
 
     useEffect(() => {
         if (
@@ -610,7 +927,9 @@ function AsignacionesPage() {
     ]);
 
     const indiceInicial =
-        (paginaActual - 1) *
+        (
+            paginaActual - 1
+        ) *
         REGISTROS_POR_PAGINA;
 
     const indiceFinal =
@@ -632,7 +951,7 @@ function AsignacionesPage() {
                     </h1>
 
                     <p>
-                        {puedeEjecutarAsignacion
+                        {puedeGestionar
                             ? "Consulte las órdenes asignadas y gestione la asignación de técnicos."
                             : "Consulte las órdenes asignadas a los técnicos."}
                     </p>
@@ -655,7 +974,7 @@ function AsignacionesPage() {
                             : "Actualizar"}
                     </button>
 
-                    {puedeEjecutarAsignacion && (
+                    {puedeGestionar && (
                         <>
                             <button
                                 type="button"
@@ -704,7 +1023,7 @@ function AsignacionesPage() {
             )}
 
             {resumenProceso &&
-                puedeEjecutarAsignacion && (
+                puedeGestionar && (
                     <div className="resultado-proceso">
                         <h3>
                             Resultado de la asignación
@@ -760,40 +1079,28 @@ function AsignacionesPage() {
 
             <div className="resumen-asignaciones">
                 <div className="tarjeta-resumen">
-                    <span>
-                        Total
-                    </span>
-
+                    <span>Total</span>
                     <strong>
                         {asignaciones.length}
                     </strong>
                 </div>
 
                 <div className="tarjeta-resumen">
-                    <span>
-                        Activas
-                    </span>
-
+                    <span>Activas</span>
                     <strong>
                         {totalActivas}
                     </strong>
                 </div>
 
                 <div className="tarjeta-resumen">
-                    <span>
-                        Finalizadas
-                    </span>
-
+                    <span>Finalizadas</span>
                     <strong>
                         {totalFinalizadas}
                     </strong>
                 </div>
 
                 <div className="tarjeta-resumen">
-                    <span>
-                        Canceladas
-                    </span>
-
+                    <span>Canceladas</span>
                     <strong>
                         {totalCanceladas}
                     </strong>
@@ -863,15 +1170,6 @@ function AsignacionesPage() {
                 )}
 
                 {!cargando &&
-                    !error &&
-                    asignaciones.length ===
-                        0 && (
-                        <div className="estado-asignaciones">
-                            No existen asignaciones registradas.
-                        </div>
-                    )}
-
-                {!cargando &&
                     asignaciones.length >
                         0 && (
                         <>
@@ -886,20 +1184,30 @@ function AsignacionesPage() {
                                             <th>Tipo</th>
                                             <th>Estado</th>
                                             <th>Estado interno</th>
-                                            <th>Actividad OFSC</th>
                                             <th>Responsable</th>
                                             <th>Rol</th>
-                                            <th>Fecha asignación</th>
+                                            <th>Fecha</th>
+
+                                            {puedeGestionar && (
+                                                <th>
+                                                    Acciones
+                                                </th>
+                                            )}
                                         </tr>
                                     </thead>
 
                                     <tbody>
-                                        {asignacionesVisibles.length >
-                                        0 ? (
-                                            asignacionesVisibles.map(
-                                                (
-                                                    asignacion
-                                                ) => (
+                                        {asignacionesVisibles.map(
+                                            (
+                                                asignacion
+                                            ) => {
+                                                const activa =
+                                                    normalizarTexto(
+                                                        asignacion.EstadoAsignacion
+                                                    ) ===
+                                                    "ACTIVA";
+
+                                                return (
                                                     <tr
                                                         key={
                                                             asignacion.IdAsignacion
@@ -933,11 +1241,9 @@ function AsignacionesPage() {
                                                         </td>
 
                                                         <td>
-                                                            <div>
-                                                                {formatearFecha(
-                                                                    asignacion.FechaAgenda
-                                                                )}
-                                                            </div>
+                                                            {formatearFecha(
+                                                                asignacion.FechaAgenda
+                                                            )}
 
                                                             <small>
                                                                 {asignacion.Horario ||
@@ -960,7 +1266,7 @@ function AsignacionesPage() {
                                                         <td>
                                                             {mostrarEstado(
                                                                 asignacion.TipoAsignacion ||
-                                                                    "Sin tipo"
+                                                                "Sin tipo"
                                                             )}
                                                         </td>
 
@@ -971,8 +1277,7 @@ function AsignacionesPage() {
                                                                 )}`}
                                                             >
                                                                 {mostrarEstado(
-                                                                    asignacion.EstadoAsignacion ||
-                                                                        "Sin estado"
+                                                                    asignacion.EstadoAsignacion
                                                                 )}
                                                             </span>
                                                         </td>
@@ -984,39 +1289,21 @@ function AsignacionesPage() {
                                                                 )}`}
                                                             >
                                                                 {mostrarEstado(
-                                                                    asignacion.EstadoInternoOT ||
-                                                                        "Sin estado"
+                                                                    asignacion.EstadoInternoOT
                                                                 )}
                                                             </span>
                                                         </td>
 
                                                         <td>
-                                                            <div>
-                                                                {mostrarEstado(
-                                                                    asignacion.EstadoActividad ||
-                                                                        "Sin actividad"
-                                                                )}
-                                                            </div>
-
-                                                            <small>
-                                                                {asignacion.IdActividadOFSC
-                                                                    ? `ID: ${asignacion.IdActividadOFSC}`
-                                                                    : "Sin vínculo OFSC"}
-                                                            </small>
-                                                        </td>
-
-                                                        <td>
-                                                            <strong className="responsable-asignacion">
+                                                            <strong>
                                                                 {asignacion.UsuarioResponsable ||
                                                                     "Sin responsable"}
                                                             </strong>
 
-                                                            <small className="usuario-responsable">
+                                                            <small>
                                                                 {asignacion.NombreUsuarioResponsable
                                                                     ? `@${asignacion.NombreUsuarioResponsable}`
-                                                                    : asignacion.IdUsuario
-                                                                      ? `ID usuario: ${asignacion.IdUsuario}`
-                                                                      : "Sin usuario"}
+                                                                    : "Sin usuario"}
                                                             </small>
                                                         </td>
 
@@ -1032,119 +1319,119 @@ function AsignacionesPage() {
                                                                 asignacion.FechaAsignacion
                                                             )}
                                                         </td>
+
+                                                        {puedeGestionar && (
+                                                            <td>
+                                                                {activa ? (
+                                                                    <div className="acciones-fila-asignacion">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="boton-reasignar"
+                                                                            onClick={() =>
+                                                                                abrirReasignacion(
+                                                                                    asignacion
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Reasignar
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            className="boton-cancelar-asignacion"
+                                                                            onClick={() =>
+                                                                                abrirCancelacion(
+                                                                                    asignacion
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Cancelar
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="sin-acciones">
+                                                                        Sin acciones
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                        )}
                                                     </tr>
-                                                )
-                                            )
-                                        ) : (
-                                            <tr>
-                                                <td
-                                                    colSpan="11"
-                                                    className="sin-resultados-asignaciones"
-                                                >
-                                                    No se encontraron asignaciones con los filtros seleccionados.
-                                                </td>
-                                            </tr>
+                                                );
+                                            }
                                         )}
                                     </tbody>
                                 </table>
                             </div>
 
-                            {asignacionesFiltradas.length >
-                                0 && (
-                                <div className="paginacion-asignaciones">
-                                    <span>
-                                        Mostrando{" "}
-                                        {indiceInicial +
-                                            1}{" "}
-                                        a{" "}
-                                        {Math.min(
-                                            indiceFinal,
-                                            asignacionesFiltradas.length
-                                        )}{" "}
-                                        de{" "}
-                                        {
-                                            asignacionesFiltradas.length
+                            <div className="paginacion-asignaciones">
+                                <span>
+                                    Mostrando{" "}
+                                    {indiceInicial + 1} a{" "}
+                                    {Math.min(
+                                        indiceFinal,
+                                        asignacionesFiltradas.length
+                                    )}{" "}
+                                    de{" "}
+                                    {
+                                        asignacionesFiltradas.length
+                                    }
+                                </span>
+
+                                <div className="botones-paginacion">
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            paginaActual ===
+                                            1
                                         }
+                                        onClick={() =>
+                                            setPaginaActual(
+                                                (pagina) =>
+                                                    pagina -
+                                                    1
+                                            )
+                                        }
+                                    >
+                                        Anterior
+                                    </button>
+
+                                    <span>
+                                        Página{" "}
+                                        {paginaActual} de{" "}
+                                        {totalPaginas}
                                     </span>
 
-                                    <div className="botones-paginacion">
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                paginaActual ===
-                                                1
-                                            }
-                                            onClick={() =>
-                                                setPaginaActual(
-                                                    (
-                                                        pagina
-                                                    ) =>
-                                                        pagina -
-                                                        1
-                                                )
-                                            }
-                                        >
-                                            Anterior
-                                        </button>
-
-                                        <span>
-                                            Página{" "}
-                                            {
-                                                paginaActual
-                                            }{" "}
-                                            de{" "}
-                                            {
-                                                totalPaginas
-                                            }
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            disabled={
-                                                paginaActual ===
-                                                totalPaginas
-                                            }
-                                            onClick={() =>
-                                                setPaginaActual(
-                                                    (
-                                                        pagina
-                                                    ) =>
-                                                        pagina +
-                                                        1
-                                                )
-                                            }
-                                        >
-                                            Siguiente
-                                        </button>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={
+                                            paginaActual ===
+                                            totalPaginas
+                                        }
+                                        onClick={() =>
+                                            setPaginaActual(
+                                                (pagina) =>
+                                                    pagina +
+                                                    1
+                                            )
+                                        }
+                                    >
+                                        Siguiente
+                                    </button>
                                 </div>
-                            )}
+                            </div>
                         </>
                     )}
             </div>
 
+            {/* =====================================
+                MODAL ASIGNACIÓN MANUAL
+            ===================================== */}
             {modalManualAbierto && (
-                <div
-                    className="modal-asignacion-fondo"
-                    role="presentation"
-                    onMouseDown={(evento) => {
-                        if (
-                            evento.target ===
-                            evento.currentTarget
-                        ) {
-                            cerrarAsignacionManual();
-                        }
-                    }}
-                >
-                    <div
-                        className="modal-asignacion"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="titulo-asignacion-manual"
-                    >
+                <div className="modal-asignacion-fondo">
+                    <div className="modal-asignacion">
                         <div className="modal-asignacion-encabezado">
                             <div>
-                                <h2 id="titulo-asignacion-manual">
+                                <h2>
                                     Asignación manual
                                 </h2>
 
@@ -1159,10 +1446,6 @@ function AsignacionesPage() {
                                 onClick={
                                     cerrarAsignacionManual
                                 }
-                                disabled={
-                                    guardandoManual
-                                }
-                                aria-label="Cerrar"
                             >
                                 ×
                             </button>
@@ -1170,7 +1453,7 @@ function AsignacionesPage() {
 
                         {cargandoOpciones ? (
                             <div className="estado-modal-asignacion">
-                                Cargando órdenes y técnicos...
+                                Cargando opciones...
                             </div>
                         ) : (
                             <form
@@ -1185,12 +1468,11 @@ function AsignacionesPage() {
                                 )}
 
                                 <div className="campo-modal-asignacion">
-                                    <label htmlFor="orden-manual">
-                                        Orden pendiente
+                                    <label>
+                                        Orden
                                     </label>
 
                                     <select
-                                        id="orden-manual"
                                         value={
                                             idOrdenManual
                                         }
@@ -1198,9 +1480,6 @@ function AsignacionesPage() {
                                             setIdOrdenManual(
                                                 evento.target.value
                                             )
-                                        }
-                                        disabled={
-                                            guardandoManual
                                         }
                                     >
                                         <option value="">
@@ -1222,27 +1501,18 @@ function AsignacionesPage() {
                                                         orden.CodigoOT
                                                     }
                                                     {" - "}
-                                                    {orden.Cliente ||
-                                                        "Sin cliente"}
-                                                    {" - "}
-                                                    {formatearFecha(
-                                                        orden.FechaAgenda
-                                                    )}
-                                                    {" "}
-                                                    {orden.Horario}
+                                                    {
+                                                        orden.Cliente
+                                                    }
                                                 </option>
                                             )
                                         )}
                                     </select>
 
-                                    <small>
-                                        {ordenesManualesDisponibles.length} orden(es) con fecha y horario disponibles.
-                                    </small>
-
                                     {ordenesSinAgenda >
                                         0 && (
-                                        <small className="aviso-modal-asignacion">
-                                            {ordenesSinAgenda} orden(es) pendientes no aparecen porque no tienen fecha u horario.
+                                        <small>
+                                            {ordenesSinAgenda} orden(es) no tienen fecha u horario.
                                         </small>
                                     )}
                                 </div>
@@ -1257,35 +1527,29 @@ function AsignacionesPage() {
                                         </strong>
 
                                         <span>
-                                            {ordenManualSeleccionada.Cliente ||
-                                                "Sin cliente"}
+                                            {
+                                                ordenManualSeleccionada.Cliente
+                                            }
                                         </span>
 
                                         <span>
-                                            {ordenManualSeleccionada.Direccion ||
-                                                "Sin dirección"}
-                                        </span>
-
-                                        <span>
-                                            {ordenManualSeleccionada.Distrito ||
-                                                "Sin distrito"}
-                                            {" · "}
                                             {formatearFecha(
                                                 ordenManualSeleccionada.FechaAgenda
                                             )}
                                             {" · "}
-                                            {ordenManualSeleccionada.Horario}
+                                            {
+                                                ordenManualSeleccionada.Horario
+                                            }
                                         </span>
                                     </div>
                                 )}
 
                                 <div className="campo-modal-asignacion">
-                                    <label htmlFor="tecnico-manual">
+                                    <label>
                                         Técnico
                                     </label>
 
                                     <select
-                                        id="tecnico-manual"
                                         value={
                                             idTecnicoManual
                                         }
@@ -1293,9 +1557,6 @@ function AsignacionesPage() {
                                             setIdTecnicoManual(
                                                 evento.target.value
                                             )
-                                        }
-                                        disabled={
-                                            guardandoManual
                                         }
                                     >
                                         <option value="">
@@ -1319,20 +1580,10 @@ function AsignacionesPage() {
                                                     {
                                                         tecnico.CodigoTecnico
                                                     }
-                                                    {" - "}
-                                                    {tecnico.DistritoBase ||
-                                                        "Sin distrito"}
-                                                    {" - Cap. "}
-                                                    {tecnico.CapacidadMaxima ??
-                                                        0}
                                                 </option>
                                             )
                                         )}
                                     </select>
-
-                                    <small>
-                                        La capacidad del técnico será validada para la fecha y turno de la OT.
-                                    </small>
                                 </div>
 
                                 {tecnicoManualSeleccionado && (
@@ -1344,40 +1595,18 @@ function AsignacionesPage() {
                                         </strong>
 
                                         <span>
-                                            Código:{" "}
+                                            Distrito base:{" "}
                                             {
-                                                tecnicoManualSeleccionado.CodigoTecnico
+                                                tecnicoManualSeleccionado.DistritoBase
                                             }
                                         </span>
 
                                         <span>
-                                            Tipo:{" "}
-                                            {tecnicoManualSeleccionado.TipoTecnico ||
-                                                "Sin tipo"}
+                                            Capacidad máxima:{" "}
+                                            {
+                                                tecnicoManualSeleccionado.CapacidadMaxima
+                                            }
                                         </span>
-
-                                        <span>
-                                            Distrito base:{" "}
-                                            {tecnicoManualSeleccionado.DistritoBase ||
-                                                "Sin distrito"}
-                                            {" · Capacidad máxima: "}
-                                            {tecnicoManualSeleccionado.CapacidadMaxima ??
-                                                0}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {ordenesManualesDisponibles.length ===
-                                    0 && (
-                                    <div className="mensaje-modal-informativo">
-                                        No existen órdenes pendientes con fecha y horario para asignar.
-                                    </div>
-                                )}
-
-                                {opcionesManuales.tecnicos.length ===
-                                    0 && (
-                                    <div className="mensaje-modal-informativo">
-                                        No existen técnicos activos y disponibles.
                                     </div>
                                 )}
 
@@ -1387,9 +1616,6 @@ function AsignacionesPage() {
                                         className="boton-cancelar-manual"
                                         onClick={
                                             cerrarAsignacionManual
-                                        }
-                                        disabled={
-                                            guardandoManual
                                         }
                                     >
                                         Cancelar
@@ -1401,11 +1627,7 @@ function AsignacionesPage() {
                                         disabled={
                                             guardandoManual ||
                                             !idOrdenManual ||
-                                            !idTecnicoManual ||
-                                            ordenesManualesDisponibles.length ===
-                                                0 ||
-                                            opcionesManuales.tecnicos.length ===
-                                                0
+                                            !idTecnicoManual
                                         }
                                     >
                                         {guardandoManual
@@ -1418,6 +1640,289 @@ function AsignacionesPage() {
                     </div>
                 </div>
             )}
+
+            {/* =====================================
+                MODAL REASIGNAR
+            ===================================== */}
+            {modalReasignarAbierto &&
+                asignacionReasignar && (
+                    <div className="modal-asignacion-fondo">
+                        <div className="modal-asignacion">
+                            <div className="modal-asignacion-encabezado">
+                                <div>
+                                    <h2>
+                                        Reasignar orden
+                                    </h2>
+
+                                    <p>
+                                        Cambie el técnico responsable de la OT.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="boton-cerrar-modal"
+                                    onClick={
+                                        cerrarReasignacion
+                                    }
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={
+                                    guardarReasignacion
+                                }
+                            >
+                                {errorReasignacion && (
+                                    <div className="mensaje-modal-error">
+                                        {errorReasignacion}
+                                    </div>
+                                )}
+
+                                <div className="detalle-seleccion-manual">
+                                    <strong>
+                                        OT{" "}
+                                        {
+                                            asignacionReasignar.CodigoOT
+                                        }
+                                    </strong>
+
+                                    <span>
+                                        Técnico actual:{" "}
+                                        {
+                                            asignacionReasignar.Tecnico
+                                        }
+                                    </span>
+
+                                    <span>
+                                        Agenda:{" "}
+                                        {formatearFecha(
+                                            asignacionReasignar.FechaAgenda
+                                        )}
+                                        {" · "}
+                                        {
+                                            asignacionReasignar.Horario
+                                        }
+                                    </span>
+                                </div>
+
+                                <div className="campo-modal-asignacion">
+                                    <label>
+                                        Nuevo técnico
+                                    </label>
+
+                                    <select
+                                        value={
+                                            idTecnicoReasignar
+                                        }
+                                        onChange={(evento) =>
+                                            setIdTecnicoReasignar(
+                                                evento.target.value
+                                            )
+                                        }
+                                        disabled={
+                                            cargandoOpciones
+                                        }
+                                    >
+                                        <option value="">
+                                            Seleccione un técnico
+                                        </option>
+
+                                        {tecnicosReasignacion.map(
+                                            (tecnico) => (
+                                                <option
+                                                    key={
+                                                        tecnico.IdTecnico
+                                                    }
+                                                    value={
+                                                        tecnico.IdTecnico
+                                                    }
+                                                >
+                                                    {
+                                                        tecnico.NombreCompleto
+                                                    }
+                                                    {" - "}
+                                                    {
+                                                        tecnico.CodigoTecnico
+                                                    }
+                                                    {" - Cap. "}
+                                                    {
+                                                        tecnico.CapacidadMaxima
+                                                    }
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+                                </div>
+
+                                <div className="campo-modal-asignacion">
+                                    <label>
+                                        Motivo
+                                    </label>
+
+                                    <textarea
+                                        rows="4"
+                                        maxLength="350"
+                                        placeholder="Ejemplo: técnico no disponible en la zona."
+                                        value={
+                                            motivoReasignar
+                                        }
+                                        onChange={(evento) =>
+                                            setMotivoReasignar(
+                                                evento.target.value
+                                            )
+                                        }
+                                    />
+
+                                    <small>
+                                        {motivoReasignar.length}/350 caracteres
+                                    </small>
+                                </div>
+
+                                <div className="modal-asignacion-acciones">
+                                    <button
+                                        type="button"
+                                        className="boton-cancelar-manual"
+                                        onClick={
+                                            cerrarReasignacion
+                                        }
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="boton-guardar-manual"
+                                        disabled={
+                                            guardandoReasignacion ||
+                                            !idTecnicoReasignar ||
+                                            motivoReasignar.trim()
+                                                .length <
+                                                5
+                                        }
+                                    >
+                                        {guardandoReasignacion
+                                            ? "Reasignando..."
+                                            : "Confirmar reasignación"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+            {/* =====================================
+                MODAL CANCELAR
+            ===================================== */}
+            {modalCancelarAbierto &&
+                asignacionCancelar && (
+                    <div className="modal-asignacion-fondo">
+                        <div className="modal-asignacion modal-cancelacion">
+                            <div className="modal-asignacion-encabezado">
+                                <div>
+                                    <h2>
+                                        Cancelar asignación
+                                    </h2>
+
+                                    <p>
+                                        La OT volverá al estado pendiente.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="boton-cerrar-modal"
+                                    onClick={
+                                        cerrarCancelacion
+                                    }
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={
+                                    guardarCancelacion
+                                }
+                            >
+                                {errorCancelacion && (
+                                    <div className="mensaje-modal-error">
+                                        {errorCancelacion}
+                                    </div>
+                                )}
+
+                                <div className="detalle-cancelacion">
+                                    <strong>
+                                        OT{" "}
+                                        {
+                                            asignacionCancelar.CodigoOT
+                                        }
+                                    </strong>
+
+                                    <span>
+                                        Técnico:{" "}
+                                        {
+                                            asignacionCancelar.Tecnico
+                                        }
+                                    </span>
+                                </div>
+
+                                <div className="campo-modal-asignacion">
+                                    <label>
+                                        Motivo de cancelación
+                                    </label>
+
+                                    <textarea
+                                        rows="4"
+                                        maxLength="350"
+                                        placeholder="Indique el motivo de la cancelación."
+                                        value={
+                                            motivoCancelar
+                                        }
+                                        onChange={(evento) =>
+                                            setMotivoCancelar(
+                                                evento.target.value
+                                            )
+                                        }
+                                    />
+
+                                    <small>
+                                        {motivoCancelar.length}/350 caracteres
+                                    </small>
+                                </div>
+
+                                <div className="modal-asignacion-acciones">
+                                    <button
+                                        type="button"
+                                        className="boton-cancelar-manual"
+                                        onClick={
+                                            cerrarCancelacion
+                                        }
+                                    >
+                                        Volver
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="boton-confirmar-cancelacion"
+                                        disabled={
+                                            guardandoCancelacion ||
+                                            motivoCancelar.trim()
+                                                .length <
+                                                5
+                                        }
+                                    >
+                                        {guardandoCancelacion
+                                            ? "Cancelando..."
+                                            : "Cancelar asignación"}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
         </section>
     );
 }

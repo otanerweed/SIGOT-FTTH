@@ -22,7 +22,8 @@ router.get(
         "Coordinador",
         "Supervisor"
     ),
-    asignacionController.listarAsignaciones
+    asignacionController
+        .listarAsignaciones
 );
 
 // =====================================
@@ -49,6 +50,32 @@ router.post(
     ),
     asignacionController
         .ejecutarAsignacionManual
+);
+
+// =====================================
+// REASIGNAR ORDEN
+// =====================================
+router.patch(
+    "/:id/reasignar",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    asignacionController
+        .ejecutarReasignacion
+);
+
+// =====================================
+// CANCELAR ASIGNACIÓN
+// =====================================
+router.patch(
+    "/:id/cancelar",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador"
+    ),
+    asignacionController
+        .ejecutarCancelacion
 );
 
 // =====================================

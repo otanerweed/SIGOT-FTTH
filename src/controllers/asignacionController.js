@@ -1,6 +1,8 @@
 const {
     asignarOrdenesAutomaticamente,
     asignarOrdenManualmente,
+    reasignarOrden,
+    cancelarAsignacion,
     obtenerAsignaciones,
     obtenerOpcionesAsignacionManual
 } = require("../services/asignacionService");
@@ -21,11 +23,9 @@ function obtenerIdUsuarioAutenticado(req) {
         : null;
 }
 
-/**
- * Lista las asignaciones registradas.
- *
- * GET /api/asignaciones
- */
+// =====================================
+// LISTAR ASIGNACIONES
+// =====================================
 async function listarAsignaciones(req, res) {
     try {
         const asignaciones =
@@ -44,17 +44,15 @@ async function listarAsignaciones(req, res) {
             ok: false,
             mensaje:
                 "No se pudieron obtener las asignaciones.",
-            detalle: error.message
+            detalle:
+                error.message
         });
     }
 }
 
-/**
- * Obtiene las órdenes pendientes y técnicos
- * disponibles para la asignación manual.
- *
- * GET /api/asignaciones/manual/opciones
- */
+// =====================================
+// OPCIONES DE ASIGNACIÓN MANUAL
+// =====================================
 async function listarOpcionesManuales(
     req,
     res
@@ -76,16 +74,15 @@ async function listarOpcionesManuales(
             ok: false,
             mensaje:
                 "No se pudieron cargar las opciones de asignación manual.",
-            detalle: error.message
+            detalle:
+                error.message
         });
     }
 }
 
-/**
- * Registra una asignación manual.
- *
- * POST /api/asignaciones/manual
- */
+// =====================================
+// EJECUTAR ASIGNACIÓN MANUAL
+// =====================================
 async function ejecutarAsignacionManual(
     req,
     res
@@ -149,12 +146,14 @@ async function ejecutarAsignacionManual(
 
         return res.status(201).json({
             ok: true,
+
             mensaje:
                 (
                     `La OT ${resultado.codigoOT} ` +
                     `fue asignada correctamente a ` +
                     `${resultado.tecnico}.`
                 ),
+
             asignacion:
                 resultado
         });
@@ -170,10 +169,12 @@ async function ejecutarAsignacionManual(
             )
             .json({
                 ok: false,
+
                 mensaje:
                     error.statusCode
                         ? error.message
                         : "No se pudo realizar la asignación manual.",
+
                 detalle:
                     error.statusCode
                         ? undefined
@@ -182,11 +183,192 @@ async function ejecutarAsignacionManual(
     }
 }
 
-/**
- * Ejecuta el proceso de asignación automática.
- *
- * POST /api/asignaciones/automatica
- */
+// =====================================
+// REASIGNAR ORDEN
+// =====================================
+async function ejecutarReasignacion(
+    req,
+    res
+) {
+    try {
+        const idUsuario =
+            obtenerIdUsuarioAutenticado(req);
+
+        if (!idUsuario) {
+            return res.status(401).json({
+                ok: false,
+                mensaje:
+                    "No se pudo identificar al usuario autenticado."
+            });
+        }
+
+        const idAsignacion = Number(
+            req.params.id
+        );
+
+        const idTecnicoNuevo = Number(
+            req.body?.idTecnicoNuevo
+        );
+
+        const motivo = String(
+            req.body?.motivo || ""
+        ).trim();
+
+        if (
+            !Number.isInteger(idAsignacion) ||
+            idAsignacion <= 0
+        ) {
+            return res.status(400).json({
+                ok: false,
+                mensaje:
+                    "La asignación seleccionada no es válida."
+            });
+        }
+
+        if (
+            !Number.isInteger(idTecnicoNuevo) ||
+            idTecnicoNuevo <= 0
+        ) {
+            return res.status(400).json({
+                ok: false,
+                mensaje:
+                    "Debe seleccionar un técnico válido."
+            });
+        }
+
+        const resultado =
+            await reasignarOrden(
+                idAsignacion,
+                idTecnicoNuevo,
+                motivo,
+                idUsuario
+            );
+
+        return res.status(201).json({
+            ok: true,
+
+            mensaje:
+                (
+                    `La OT ${resultado.codigoOT} ` +
+                    `fue reasignada correctamente a ` +
+                    `${resultado.tecnicoNuevo}.`
+                ),
+
+            reasignacion:
+                resultado
+        });
+    } catch (error) {
+        console.error(
+            "Error al reasignar la orden:",
+            error
+        );
+
+        return res
+            .status(
+                error.statusCode || 500
+            )
+            .json({
+                ok: false,
+
+                mensaje:
+                    error.statusCode
+                        ? error.message
+                        : "No se pudo reasignar la orden.",
+
+                detalle:
+                    error.statusCode
+                        ? undefined
+                        : error.message
+            });
+    }
+}
+
+// =====================================
+// CANCELAR ASIGNACIÓN
+// =====================================
+async function ejecutarCancelacion(
+    req,
+    res
+) {
+    try {
+        const idUsuario =
+            obtenerIdUsuarioAutenticado(req);
+
+        if (!idUsuario) {
+            return res.status(401).json({
+                ok: false,
+                mensaje:
+                    "No se pudo identificar al usuario autenticado."
+            });
+        }
+
+        const idAsignacion = Number(
+            req.params.id
+        );
+
+        const motivo = String(
+            req.body?.motivo || ""
+        ).trim();
+
+        if (
+            !Number.isInteger(idAsignacion) ||
+            idAsignacion <= 0
+        ) {
+            return res.status(400).json({
+                ok: false,
+                mensaje:
+                    "La asignación seleccionada no es válida."
+            });
+        }
+
+        const resultado =
+            await cancelarAsignacion(
+                idAsignacion,
+                motivo,
+                idUsuario
+            );
+
+        return res.status(200).json({
+            ok: true,
+
+            mensaje:
+                (
+                    `La asignación de la OT ` +
+                    `${resultado.codigoOT} fue cancelada correctamente.`
+                ),
+
+            cancelacion:
+                resultado
+        });
+    } catch (error) {
+        console.error(
+            "Error al cancelar la asignación:",
+            error
+        );
+
+        return res
+            .status(
+                error.statusCode || 500
+            )
+            .json({
+                ok: false,
+
+                mensaje:
+                    error.statusCode
+                        ? error.message
+                        : "No se pudo cancelar la asignación.",
+
+                detalle:
+                    error.statusCode
+                        ? undefined
+                        : error.message
+            });
+    }
+}
+
+// =====================================
+// EJECUTAR ASIGNACIÓN AUTOMÁTICA
+// =====================================
 async function ejecutarAsignacion(req, res) {
     try {
         const idUsuario =
@@ -251,7 +433,8 @@ async function ejecutarAsignacion(req, res) {
             ok: false,
             mensaje:
                 "No se pudo ejecutar la asignación automática.",
-            detalle: error.message
+            detalle:
+                error.message
         });
     }
 }
@@ -260,5 +443,7 @@ module.exports = {
     listarAsignaciones,
     listarOpcionesManuales,
     ejecutarAsignacionManual,
+    ejecutarReasignacion,
+    ejecutarCancelacion,
     ejecutarAsignacion
 };

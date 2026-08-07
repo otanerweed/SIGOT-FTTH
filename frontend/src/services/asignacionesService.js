@@ -44,6 +44,44 @@ export const ejecutarAsignacionManual =
     };
 
 // =====================================
+// REASIGNAR ORDEN
+// =====================================
+export const reasignarOrden =
+    async (
+        idAsignacion,
+        idTecnicoNuevo,
+        motivo
+    ) => {
+        const respuesta = await api.patch(
+            `/asignaciones/${idAsignacion}/reasignar`,
+            {
+                idTecnicoNuevo,
+                motivo
+            }
+        );
+
+        return respuesta.data;
+    };
+
+// =====================================
+// CANCELAR ASIGNACIÓN
+// =====================================
+export const cancelarAsignacion =
+    async (
+        idAsignacion,
+        motivo
+    ) => {
+        const respuesta = await api.patch(
+            `/asignaciones/${idAsignacion}/cancelar`,
+            {
+                motivo
+            }
+        );
+
+        return respuesta.data;
+    };
+
+// =====================================
 // EJECUTAR ASIGNACIÓN AUTOMÁTICA
 // =====================================
 export const ejecutarAsignacionAutomatica =

@@ -217,7 +217,7 @@
 
 .tabla-asignaciones {
     width: 100%;
-    min-width: 1720px;
+    min-width: 1900px;
     border-collapse: collapse;
 }
 
@@ -624,6 +624,203 @@
 
     .boton-cancelar-manual,
     .boton-guardar-manual {
+        width: 100%;
+    }
+}
+
+/* =====================================
+   ACCIONES DE ASIGNACIÓN
+===================================== */
+
+.acciones-fila-asignacion {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 170px;
+}
+
+.boton-reasignar,
+.boton-cancelar-asignacion {
+    padding: 7px 11px;
+    border: none;
+    border-radius: 7px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+        background 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.boton-reasignar {
+    background: #0369a1;
+}
+
+.boton-reasignar:hover:not(:disabled) {
+    background: #075985;
+}
+
+.boton-cancelar-asignacion {
+    background: #dc2626;
+}
+
+.boton-cancelar-asignacion:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.boton-reasignar:disabled,
+.boton-cancelar-asignacion:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.sin-acciones {
+    color: #94a3b8;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* =====================================
+   TEXTAREA PARA MOTIVOS
+===================================== */
+
+.campo-modal-asignacion textarea {
+    width: 100%;
+    min-height: 105px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+}
+
+.campo-modal-asignacion textarea:focus {
+    border-color: #0f766e;
+    box-shadow:
+        0 0 0 3px
+        rgba(15, 118, 110, 0.13);
+}
+
+.campo-modal-asignacion textarea:disabled {
+    background: #f8fafc;
+    cursor: not-allowed;
+}
+
+/* =====================================
+   MODAL DE REASIGNACIÓN
+===================================== */
+
+.detalle-reasignacion {
+    display: grid;
+    gap: 6px;
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #bae6fd;
+    border-radius: 9px;
+    background: #f0f9ff;
+}
+
+.detalle-reasignacion strong {
+    color: #0c4a6e;
+}
+
+.detalle-reasignacion span {
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+/* =====================================
+   MODAL DE CANCELACIÓN
+===================================== */
+
+.modal-cancelacion {
+    max-width: 620px;
+}
+
+.detalle-cancelacion {
+    display: grid;
+    gap: 6px;
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #fecaca;
+    border-radius: 9px;
+    background: #fff7f7;
+}
+
+.detalle-cancelacion strong {
+    color: #991b1b;
+}
+
+.detalle-cancelacion span {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.boton-confirmar-cancelacion {
+    padding: 11px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #dc2626;
+    color: #ffffff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.boton-confirmar-cancelacion:hover:not(:disabled) {
+    background: #b91c1c;
+}
+
+.boton-confirmar-cancelacion:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+/* =====================================
+   MEJORAS PARA LOS MODALES
+===================================== */
+
+.modal-asignacion form {
+    width: 100%;
+}
+
+.modal-asignacion select,
+.modal-asignacion textarea {
+    box-sizing: border-box;
+}
+
+.modal-asignacion-acciones button {
+    min-width: 120px;
+}
+
+/* =====================================
+   RESPONSIVE ACCIONES
+===================================== */
+
+@media (max-width: 750px) {
+    .acciones-fila-asignacion {
+        flex-direction: column;
+        align-items: stretch;
+        min-width: 110px;
+    }
+
+    .boton-reasignar,
+    .boton-cancelar-asignacion {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    .boton-confirmar-cancelacion {
         width: 100%;
     }
 }
