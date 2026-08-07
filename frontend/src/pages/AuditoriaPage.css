@@ -93,10 +93,11 @@
     display: grid;
     grid-template-columns:
         minmax(280px, 1fr)
-        210px
-        260px
+        190px
+        220px
+        240px
         auto;
-    gap: 16px;
+    gap: 14px;
     align-items: end;
     margin-bottom: 20px;
 }

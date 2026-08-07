@@ -77,7 +77,113 @@ function construirObservacion(
         .join(" | ")
         .slice(0, 500);
 }
-
+// =====================================
+// REGISTRAR HISTORIAL DE ASIGNACIÓN
+// =====================================
+async function registrarHistorialAsignacion(
+    transaction,
+    {
+        idAsignacion,
+        idOrden,
+        idTecnicoAnterior = null,
+        idTecnicoNuevo = null,
+        evento,
+        estadoAnterior = null,
+        estadoNuevo,
+        motivo = null,
+        idUsuario,
+        idActividad = null
+    }
+) {
+    await new sql.Request(transaction)
+        .input(
+            "IdAsignacion",
+            sql.Int,
+            idAsignacion
+        )
+        .input(
+            "IdOrden",
+            sql.Int,
+            idOrden
+        )
+        .input(
+            "IdTecnicoAnterior",
+            sql.Int,
+            idTecnicoAnterior
+        )
+        .input(
+            "IdTecnicoNuevo",
+            sql.Int,
+            idTecnicoNuevo
+        )
+        .input(
+            "Evento",
+            sql.VarChar(30),
+            evento
+        )
+        .input(
+            "EstadoAnterior",
+            sql.VarChar(20),
+            estadoAnterior
+        )
+        .input(
+            "EstadoNuevo",
+            sql.VarChar(20),
+            estadoNuevo
+        )
+        .input(
+            "Motivo",
+            sql.VarChar(500),
+            motivo
+        )
+        .input(
+            "Fuente",
+            sql.VarChar(20),
+            "SIGOT"
+        )
+        .input(
+            "IdUsuario",
+            sql.Int,
+            idUsuario
+        )
+        .input(
+            "IdActividad",
+            sql.Int,
+            idActividad
+        )
+        .query(`
+            INSERT INTO dbo.HistorialAsignaciones
+            (
+                IdAsignacion,
+                IdOrden,
+                IdTecnicoAnterior,
+                IdTecnicoNuevo,
+                Evento,
+                EstadoAnterior,
+                EstadoNuevo,
+                Motivo,
+                Fuente,
+                FechaEvento,
+                IdUsuario,
+                IdActividad
+            )
+            VALUES
+            (
+                @IdAsignacion,
+                @IdOrden,
+                @IdTecnicoAnterior,
+                @IdTecnicoNuevo,
+                @Evento,
+                @EstadoAnterior,
+                @EstadoNuevo,
+                @Motivo,
+                @Fuente,
+                SYSDATETIME(),
+                @IdUsuario,
+                @IdActividad
+            );
+        `);
+}
 // =====================================
 // OBTENER TÉCNICO DENTRO DE TRANSACCIÓN
 // =====================================
@@ -586,6 +692,22 @@ async function asignarOrdenManualmente(
         const idAsignacion =
             resultadoAsignacion.recordset[0]
                 .IdAsignacion;
+        await registrarHistorialAsignacion(
+            transaction,
+            {
+                idAsignacion,
+                idOrden,
+                idTecnicoAnterior: null,
+                idTecnicoNuevo: idTecnico,
+                evento: "ASIGNACION_MANUAL",
+                estadoAnterior: null,
+                estadoNuevo: "ACTIVA",
+                motivo:
+                    "Asignación manual realizada desde SIGOT-FTTH.",
+                idUsuario,
+                idActividad: null
+            }
+        );
 
         const resultadoActualizacion =
             await new sql.Request(transaction)
@@ -935,6 +1057,38 @@ async function reasignarOrden(
         const idNuevaAsignacion =
             resultadoNuevaAsignacion.recordset[0]
                 .IdAsignacion;
+        await registrarHistorialAsignacion(
+            transaction,
+            {
+                idAsignacion:
+                    idNuevaAsignacion,
+
+                idOrden:
+                    asignacionActual.IdOrden,
+
+                idTecnicoAnterior:
+                    asignacionActual.IdTecnico,
+
+                idTecnicoNuevo:
+                    idTecnicoNuevo,
+
+                evento:
+                    "REASIGNACION",
+
+                estadoAnterior:
+                    "ACTIVA",
+
+                estadoNuevo:
+                    "ACTIVA",
+
+                motivo,
+
+                idUsuario,
+
+                idActividad:
+                    asignacionActual.IdActividad || null
+            }
+        );
 
         await new sql.Request(transaction)
             .input(
@@ -1156,6 +1310,28 @@ async function cancelarAsignacion(
                 409
             );
         }
+        await registrarHistorialAsignacion(
+            transaction,
+            {
+                idAsignacion,
+                idOrden:
+                    asignacion.IdOrden,
+                idTecnicoAnterior:
+                    asignacion.IdTecnico,
+                idTecnicoNuevo:
+                    null,
+                evento:
+                    "CANCELACION",
+                estadoAnterior:
+                    "ACTIVA",
+                estadoNuevo:
+                    "CANCELADA",
+                motivo,
+                idUsuario,
+                idActividad:
+                    null
+            }
+        );
 
         await new sql.Request(transaction)
             .input(
@@ -1365,45 +1541,75 @@ async function asignarOrdenesAutomaticamente(
                 continue;
             }
 
-            await new sql.Request(transaction)
-                .input(
-                    "IdOrden",
-                    sql.Int,
-                    orden.IdOrden
-                )
-                .input(
-                    "IdTecnico",
-                    sql.Int,
-                    tecnico.IdTecnico
-                )
-                .input(
-                    "IdUsuario",
-                    sql.Int,
-                    idUsuario
-                )
-                .query(`
-                    INSERT INTO dbo.Asignaciones
-                    (
-                        IdOrden,
-                        IdTecnico,
-                        FechaAsignacion,
-                        TipoAsignacion,
-                        Estado,
-                        IdUsuario,
-                        Observaciones
+            const resultadoAsignacion =
+                await new sql.Request(transaction)
+                    .input(
+                        "IdOrden",
+                        sql.Int,
+                        orden.IdOrden
                     )
-                    VALUES
-                    (
-                        @IdOrden,
-                        @IdTecnico,
-                        GETDATE(),
-                        'AUTOMATICA',
-                        'ACTIVA',
-                        @IdUsuario,
-                        'Asignación automática SIGOT-FTTH'
-                    );
-                `);
+                    .input(
+                        "IdTecnico",
+                        sql.Int,
+                        tecnico.IdTecnico
+                    )
+                    .input(
+                        "IdUsuario",
+                        sql.Int,
+                        idUsuario
+                    )
+                    .query(`
+                        INSERT INTO dbo.Asignaciones
+                        (
+                            IdOrden,
+                            IdTecnico,
+                            FechaAsignacion,
+                            TipoAsignacion,
+                            Estado,
+                            IdUsuario,
+                            Observaciones
+                        )
+                        OUTPUT
+                            INSERTED.IdAsignacion
+                        VALUES
+                        (
+                            @IdOrden,
+                            @IdTecnico,
+                            GETDATE(),
+                            'AUTOMATICA',
+                            'ACTIVA',
+                            @IdUsuario,
+                            'Asignación automática SIGOT-FTTH'
+                        );
+                    `);
 
+            const idAsignacion =
+                resultadoAsignacion.recordset[0]
+                    .IdAsignacion;
+
+            await registrarHistorialAsignacion(
+                transaction,
+                {
+                    idAsignacion,
+                    idOrden:
+                        orden.IdOrden,
+                    idTecnicoAnterior:
+                        null,
+                    idTecnicoNuevo:
+                        tecnico.IdTecnico,
+                    evento:
+                        "ASIGNACION_AUTOMATICA",
+                    estadoAnterior:
+                        null,
+                    estadoNuevo:
+                        "ACTIVA",
+                    motivo:
+                        "Asignación automática realizada por SIGOT-FTTH.",
+                    idUsuario,
+                    idActividad:
+                        null
+                }
+            );
             const resultadoActualizacion =
                 await new sql.Request(transaction)
                     .input(

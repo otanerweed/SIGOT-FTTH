@@ -81,12 +81,19 @@ function AuditoriaPage() {
     ] = useState("TODOS");
 
     const [
+        accionSeleccionada,
+        setAccionSeleccionada
+    ] = useState("TODOS");
+
+    const [
         usuarioSeleccionado,
         setUsuarioSeleccionado
     ] = useState("TODOS");
 
-    const [paginaActual, setPaginaActual] =
-        useState(1);
+    const [
+        paginaActual,
+        setPaginaActual
+    ] = useState(1);
 
     const [cargando, setCargando] =
         useState(true);
@@ -122,8 +129,11 @@ function AuditoriaPage() {
                 );
 
                 setError(
-                    errorPeticion.response?.data?.mensaje ||
-                        "No se pudo cargar la auditoría general."
+                    errorPeticion
+                        .response
+                        ?.data
+                        ?.mensaje ||
+                    "No se pudo cargar la auditoría general."
                 );
             } finally {
                 setCargando(false);
@@ -135,7 +145,7 @@ function AuditoriaPage() {
     }, [cargarAuditoria]);
 
     // =====================================
-    // RESUMEN
+    // RESUMEN GENERAL
     // =====================================
     const totalImportaciones =
         eventos.filter(
@@ -169,41 +179,48 @@ function AuditoriaPage() {
             const mapaUsuarios =
                 new Map();
 
-            eventos.forEach((evento) => {
-                const usuario =
-                    obtenerTexto(
-                        evento.NombreUsuarioResponsable
-                    );
+            eventos.forEach(
+                (evento) => {
+                    const usuario =
+                        obtenerTexto(
+                            evento
+                                .NombreUsuarioResponsable
+                        );
 
-                if (!usuario) {
-                    return;
-                }
+                    if (!usuario) {
+                        return;
+                    }
 
-                if (
-                    !mapaUsuarios.has(usuario)
-                ) {
-                    mapaUsuarios.set(
-                        usuario,
-                        {
+                    if (
+                        !mapaUsuarios.has(
+                            usuario
+                        )
+                    ) {
+                        mapaUsuarios.set(
                             usuario,
+                            {
+                                usuario,
 
-                            nombre:
-                                obtenerTexto(
-                                    evento.UsuarioResponsable
-                                ) ||
-                                usuario
-                        }
-                    );
+                                nombre:
+                                    obtenerTexto(
+                                        evento
+                                            .UsuarioResponsable
+                                    ) ||
+                                    usuario
+                            }
+                        );
+                    }
                 }
-            });
+            );
 
             return Array.from(
                 mapaUsuarios.values()
-            ).sort((a, b) =>
-                a.nombre.localeCompare(
-                    b.nombre,
-                    "es"
-                )
+            ).sort(
+                (a, b) =>
+                    a.nombre.localeCompare(
+                        b.nombre,
+                        "es"
+                    )
             );
         }, [eventos]);
 
@@ -213,7 +230,9 @@ function AuditoriaPage() {
     const eventosFiltrados =
         useMemo(() => {
             const textoBusqueda =
-                normalizarTexto(busqueda);
+                normalizarTexto(
+                    busqueda
+                );
 
             return eventos.filter(
                 (evento) => {
@@ -222,9 +241,15 @@ function AuditoriaPage() {
                             evento.TipoEvento
                         );
 
+                    const accion =
+                        normalizarTexto(
+                            evento.Accion
+                        );
+
                     const usuario =
                         obtenerTexto(
-                            evento.NombreUsuarioResponsable
+                            evento
+                                .NombreUsuarioResponsable
                         );
 
                     const cumpleTipo =
@@ -232,6 +257,12 @@ function AuditoriaPage() {
                             "TODOS" ||
                         tipo ===
                             tipoSeleccionado;
+
+                    const cumpleAccion =
+                        accionSeleccionada ===
+                            "TODOS" ||
+                        accion ===
+                            accionSeleccionada;
 
                     const cumpleUsuario =
                         usuarioSeleccionado ===
@@ -255,18 +286,22 @@ function AuditoriaPage() {
                                 evento.NombreUsuarioResponsable,
                                 evento.RolResponsable,
                                 evento.NombreArchivo,
-                                evento.Tecnico
+                                evento.Tecnico,
+                                evento.TecnicoAnterior,
+                                evento.TecnicoNuevo
                             ].join(" ")
                         );
 
                     const cumpleBusqueda =
-                        textoBusqueda === "" ||
+                        textoBusqueda ===
+                            "" ||
                         contenido.includes(
                             textoBusqueda
                         );
 
                     return (
                         cumpleTipo &&
+                        cumpleAccion &&
                         cumpleUsuario &&
                         cumpleBusqueda
                     );
@@ -276,14 +311,19 @@ function AuditoriaPage() {
             eventos,
             busqueda,
             tipoSeleccionado,
+            accionSeleccionada,
             usuarioSeleccionado
         ]);
 
+    // =====================================
+    // REINICIAR PAGINACIÓN
+    // =====================================
     useEffect(() => {
         setPaginaActual(1);
     }, [
         busqueda,
         tipoSeleccionado,
+        accionSeleccionada,
         usuarioSeleccionado
     ]);
 
@@ -327,10 +367,71 @@ function AuditoriaPage() {
             indiceFinal
         );
 
+    // =====================================
+    // CAMBIAR TIPO
+    // =====================================
+    function manejarCambioTipo(
+        evento
+    ) {
+        const valor =
+            evento.target.value;
+
+        setTipoSeleccionado(
+            valor
+        );
+
+        /*
+         * Si se selecciona otro tipo de evento,
+         * se limpia el filtro específico de
+         * asignaciones.
+         */
+        if (
+            valor !== "ASIGNACION"
+        ) {
+            setAccionSeleccionada(
+                "TODOS"
+            );
+        }
+    }
+
+    // =====================================
+    // CAMBIAR ACCIÓN
+    // =====================================
+    function manejarCambioAccion(
+        evento
+    ) {
+        const valor =
+            evento.target.value;
+
+        setAccionSeleccionada(
+            valor
+        );
+
+        /*
+         * Al elegir una acción específica,
+         * automáticamente filtramos también
+         * por ASIGNACION.
+         */
+        if (
+            valor !== "TODOS"
+        ) {
+            setTipoSeleccionado(
+                "ASIGNACION"
+            );
+        }
+    }
+
+    // =====================================
+    // LIMPIAR FILTROS
+    // =====================================
     function limpiarFiltros() {
         setBusqueda("");
 
         setTipoSeleccionado(
+            "TODOS"
+        );
+
+        setAccionSeleccionada(
             "TODOS"
         );
 
@@ -360,7 +461,9 @@ function AuditoriaPage() {
                     onClick={
                         cargarAuditoria
                     }
-                    disabled={cargando}
+                    disabled={
+                        cargando
+                    }
                 >
                     {cargando
                         ? "Actualizando..."
@@ -374,6 +477,9 @@ function AuditoriaPage() {
                 </div>
             )}
 
+            {/* =====================================
+                RESUMEN
+            ===================================== */}
             <div className="auditoria-resumen">
                 <div className="auditoria-tarjeta">
                     <span>
@@ -417,6 +523,9 @@ function AuditoriaPage() {
             </div>
 
             <div className="auditoria-contenedor">
+                {/* =====================================
+                    FILTROS
+                ===================================== */}
                 <div className="auditoria-filtros">
                     <div className="auditoria-grupo-filtro auditoria-busqueda">
                         <label htmlFor="buscar-auditoria">
@@ -427,10 +536,14 @@ function AuditoriaPage() {
                             id="buscar-auditoria"
                             type="search"
                             placeholder="OT, archivo, acción, técnico o responsable"
-                            value={busqueda}
+                            value={
+                                busqueda
+                            }
                             onChange={(evento) =>
                                 setBusqueda(
-                                    evento.target.value
+                                    evento
+                                        .target
+                                        .value
                                 )
                             }
                         />
@@ -446,10 +559,8 @@ function AuditoriaPage() {
                             value={
                                 tipoSeleccionado
                             }
-                            onChange={(evento) =>
-                                setTipoSeleccionado(
-                                    evento.target.value
-                                )
+                            onChange={
+                                manejarCambioTipo
                             }
                         >
                             <option value="TODOS">
@@ -471,6 +582,42 @@ function AuditoriaPage() {
                     </div>
 
                     <div className="auditoria-grupo-filtro">
+                        <label htmlFor="accion-auditoria">
+                            Acción de asignación
+                        </label>
+
+                        <select
+                            id="accion-auditoria"
+                            value={
+                                accionSeleccionada
+                            }
+                            onChange={
+                                manejarCambioAccion
+                            }
+                        >
+                            <option value="TODOS">
+                                Todas
+                            </option>
+
+                            <option value="ASIGNACION_AUTOMATICA">
+                                Asignación automática
+                            </option>
+
+                            <option value="ASIGNACION_MANUAL">
+                                Asignación manual
+                            </option>
+
+                            <option value="REASIGNACION">
+                                Reasignación
+                            </option>
+
+                            <option value="CANCELACION">
+                                Cancelación
+                            </option>
+                        </select>
+                    </div>
+
+                    <div className="auditoria-grupo-filtro">
                         <label htmlFor="usuario-auditoria">
                             Usuario
                         </label>
@@ -482,7 +629,9 @@ function AuditoriaPage() {
                             }
                             onChange={(evento) =>
                                 setUsuarioSeleccionado(
-                                    evento.target.value
+                                    evento
+                                        .target
+                                        .value
                                 )
                             }
                         >
@@ -521,6 +670,9 @@ function AuditoriaPage() {
                     </button>
                 </div>
 
+                {/* =====================================
+                    ESTADOS
+                ===================================== */}
                 {cargando && (
                     <div className="auditoria-estado">
                         Cargando auditoría...
@@ -529,14 +681,19 @@ function AuditoriaPage() {
 
                 {!cargando &&
                     !error &&
-                    eventos.length === 0 && (
+                    eventos.length ===
+                        0 && (
                         <div className="auditoria-estado">
                             No existen eventos de auditoría.
                         </div>
                     )}
 
+                {/* =====================================
+                    TABLA
+                ===================================== */}
                 {!cargando &&
-                    eventos.length > 0 && (
+                    eventos.length >
+                        0 && (
                         <>
                             <div className="auditoria-tabla-contenedor">
                                 <table className="auditoria-tabla">
@@ -584,7 +741,9 @@ function AuditoriaPage() {
                                         {eventosVisibles.length >
                                         0 ? (
                                             eventosVisibles.map(
-                                                (evento) => (
+                                                (
+                                                    evento
+                                                ) => (
                                                     <tr
                                                         key={
                                                             evento.IdEvento
@@ -707,6 +866,9 @@ function AuditoriaPage() {
                                 </table>
                             </div>
 
+                            {/* =====================================
+                                PAGINACIÓN
+                            ===================================== */}
                             {eventosFiltrados.length >
                                 0 && (
                                 <div className="auditoria-paginacion">
