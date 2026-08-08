@@ -170,6 +170,122 @@ function resolverEstadoAsignacionOrden(
 }
 
 // =====================================
+// RESOLVER EVENTO DE SEGUIMIENTO
+// =====================================
+function resolverEventoSeguimiento(
+    estadoNuevo
+) {
+    const eventos = {
+        INICIADA:
+            "INICIO",
+
+        SUSPENDIDA:
+            "SUSPENSION",
+
+        NO_REALIZADO:
+            "NO_REALIZADO",
+
+        REPROGRAMADA:
+            "REPROGRAMACION",
+
+        FINALIZADA:
+            "FINALIZACION",
+
+        CANCELADA:
+            "CANCELACION",
+
+        PENDIENTE:
+            "CAMBIO_ESTADO"
+    };
+
+    return eventos[estadoNuevo] ||
+        "CAMBIO_ESTADO";
+}
+
+// =====================================
+// REGISTRAR SEGUIMIENTO DE ESTADO
+// =====================================
+async function registrarSeguimientoEstado(
+    transaction,
+    {
+        idAsignacion,
+        estadoAnterior,
+        estadoNuevo,
+        motivo,
+        idUsuario
+    }
+) {
+    if (!idAsignacion) {
+        return;
+    }
+
+    const evento =
+        resolverEventoSeguimiento(
+            estadoNuevo
+        );
+
+    await new sql.Request(
+        transaction
+    )
+        .input(
+            "IdAsignacion",
+            sql.Int,
+            idAsignacion
+        )
+        .input(
+            "Evento",
+            sql.VarChar(50),
+            evento
+        )
+        .input(
+            "EstadoAnterior",
+            sql.VarChar(30),
+            estadoAnterior
+        )
+        .input(
+            "EstadoNuevo",
+            sql.VarChar(30),
+            estadoNuevo
+        )
+        .input(
+            "Comentario",
+            sql.VarChar(500),
+            (
+                `Cambio manual de estado de OT: ` +
+                `${estadoAnterior} -> ${estadoNuevo}. ` +
+                `Motivo: ${motivo}`
+            ).slice(0, 500)
+        )
+        .input(
+            "IdUsuario",
+            sql.Int,
+            idUsuario
+        )
+        .query(`
+            INSERT INTO dbo.SeguimientoOT
+            (
+                IdAsignacion,
+                Evento,
+                EstadoAnterior,
+                EstadoNuevo,
+                Comentario,
+                FechaEvento,
+                IdUsuario
+            )
+            VALUES
+            (
+                @IdAsignacion,
+                @Evento,
+                @EstadoAnterior,
+                @EstadoNuevo,
+                @Comentario,
+                GETDATE(),
+                @IdUsuario
+            );
+        `);
+}
+
+// =====================================
 // CAMBIAR ESTADO MANUAL DE LA OT
 // =====================================
 async function cambiarEstadoOrden(
@@ -356,10 +472,6 @@ async function cambiarEstadoOrden(
             );
         }
 
-        /*
-         * FINALIZADA y CANCELADA son
-         * estados definitivos.
-         */
         if (
             estadoAnterior ===
                 "FINALIZADA" ||
@@ -422,105 +534,127 @@ async function cambiarEstadoOrden(
                         `Motivo: ${motivo}`
                     );
 
-            await new sql.Request(
-                transaction
-            )
-                .input(
-                    "IdAsignacion",
-                    sql.Int,
-                    orden.IdAsignacion
+            const resultadoAsignacion =
+                await new sql.Request(
+                    transaction
                 )
-                .input(
-                    "NuevoEstado",
-                    sql.VarChar(20),
-                    nuevoEstadoAsignacion
-                )
-                .input(
-                    "Observacion",
-                    sql.VarChar(500),
-                    textoObservacion
-                )
-                .query(`
-                    UPDATE dbo.Asignaciones
-                    SET
-                        Estado =
-                            @NuevoEstado,
+                    .input(
+                        "IdAsignacion",
+                        sql.Int,
+                        orden.IdAsignacion
+                    )
+                    .input(
+                        "NuevoEstado",
+                        sql.VarChar(20),
+                        nuevoEstadoAsignacion
+                    )
+                    .input(
+                        "Observacion",
+                        sql.VarChar(500),
+                        textoObservacion
+                    )
+                    .query(`
+                        UPDATE dbo.Asignaciones
+                        SET
+                            Estado =
+                                @NuevoEstado,
 
-                        Observaciones =
-                            LEFT(
-                                CONCAT(
-                                    ISNULL(
-                                        Observaciones,
-                                        ''
+                            Observaciones =
+                                LEFT(
+                                    CONCAT(
+                                        ISNULL(
+                                            Observaciones,
+                                            ''
+                                        ),
+
+                                        CASE
+                                            WHEN
+                                                Observaciones IS NULL
+                                                OR LTRIM(
+                                                    RTRIM(
+                                                        Observaciones
+                                                    )
+                                                ) = ''
+                                            THEN ''
+
+                                            ELSE ' | '
+                                        END,
+
+                                        @Observacion
                                     ),
+                                    500
+                                )
 
-                                    CASE
-                                        WHEN
-                                            Observaciones IS NULL
-                                            OR LTRIM(
-                                                RTRIM(
-                                                    Observaciones
-                                                )
-                                            ) = ''
-                                        THEN ''
+                        WHERE
+                            IdAsignacion =
+                                @IdAsignacion
 
-                                        ELSE ' | '
-                                    END,
+                            AND Estado =
+                                'ACTIVA';
+                    `);
 
-                                    @Observacion
-                                ),
-                                500
-                            )
-
-                    WHERE
-                        IdAsignacion =
-                            @IdAsignacion
-
-                        AND Estado =
-                            'ACTIVA';
-                `);
+            if (
+                resultadoAsignacion
+                    .rowsAffected[0] !== 1
+            ) {
+                throw crearErrorNegocio(
+                    "La asignación fue modificada por otro usuario. Actualice la pantalla.",
+                    409
+                );
+            }
         }
 
         // =====================================
         // ACTUALIZAR ORDEN
         // =====================================
-        await new sql.Request(
-            transaction
-        )
-            .input(
-                "IdOrden",
-                sql.Int,
-                idOrden
+        const resultadoActualizacionOrden =
+            await new sql.Request(
+                transaction
             )
-            .input(
-                "EstadoOT",
-                sql.VarChar(30),
-                estadoNuevo
-            )
-            .input(
-                "EstadoAsignacion",
-                sql.VarChar(30),
-                estadoAsignacionNuevo
-            )
-            .query(`
-                UPDATE dbo.OrdenesTrabajo
-                SET
-                    EstadoOT =
-                        @EstadoOT,
+                .input(
+                    "IdOrden",
+                    sql.Int,
+                    idOrden
+                )
+                .input(
+                    "EstadoOT",
+                    sql.VarChar(30),
+                    estadoNuevo
+                )
+                .input(
+                    "EstadoAsignacion",
+                    sql.VarChar(30),
+                    estadoAsignacionNuevo
+                )
+                .query(`
+                    UPDATE dbo.OrdenesTrabajo
+                    SET
+                        EstadoOT =
+                            @EstadoOT,
 
-                    EstadoAsignacion =
-                        @EstadoAsignacion,
+                        EstadoAsignacion =
+                            @EstadoAsignacion,
 
-                    FechaActualizacion =
-                        GETDATE()
+                        FechaActualizacion =
+                            GETDATE()
 
-                WHERE
-                    IdOrden =
-                        @IdOrden;
-            `);
+                    WHERE
+                        IdOrden =
+                            @IdOrden;
+                `);
+
+        if (
+            resultadoActualizacionOrden
+                .rowsAffected[0] !== 1
+        ) {
+            throw crearErrorNegocio(
+                "No se pudo actualizar el estado de la orden.",
+                409
+            );
+        }
 
         // =====================================
-        // REGISTRAR HISTORIAL
+        // REGISTRAR HISTORIAL DE ESTADO
         // =====================================
         await new sql.Request(
             transaction
@@ -600,6 +734,25 @@ async function cambiarEstadoOrden(
             `);
 
         // =====================================
+        // REGISTRAR SEGUIMIENTO OT
+        // =====================================
+        await registrarSeguimientoEstado(
+            transaction,
+            {
+                idAsignacion:
+                    orden.IdAsignacion,
+
+                estadoAnterior,
+
+                estadoNuevo,
+
+                motivo,
+
+                idUsuario
+            }
+        );
+
+        // =====================================
         // SINCRONIZAR OPERACIÓN
         // =====================================
         await sincronizarOperacion(
@@ -636,6 +789,11 @@ async function cambiarEstadoOrden(
 
             estadoAsignacion:
                 estadoAsignacionNuevo,
+
+            seguimientoRegistrado:
+                Boolean(
+                    orden.IdAsignacion
+                ),
 
             motivo
         };
