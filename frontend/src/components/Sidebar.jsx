@@ -29,6 +29,12 @@ function Sidebar() {
         "Supervisor"
     ].includes(rol);
 
+    const puedeVerSeguimiento = [
+        "Administrador",
+        "Coordinador",
+        "Supervisor"
+    ].includes(rol);
+
     const puedeVerMapa = [
         "Administrador",
         "Coordinador",
@@ -82,6 +88,14 @@ function Sidebar() {
                     <li>
                         <NavLink to="/asignaciones">
                             📌 Asignaciones
+                        </NavLink>
+                    </li>
+                )}
+
+                {puedeVerSeguimiento && (
+                    <li>
+                        <NavLink to="/seguimiento">
+                            🕒 Seguimiento OT
                         </NavLink>
                     </li>
                 )}

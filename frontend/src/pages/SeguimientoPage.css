@@ -1,0 +1,347 @@
+.seguimiento-page {
+    width: 100%;
+}
+
+.seguimiento-encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.seguimiento-encabezado h1 {
+    margin: 0 0 8px;
+    color: #0f172a;
+    font-size: 30px;
+}
+
+.seguimiento-encabezado p {
+    margin: 0;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.seguimiento-boton-actualizar {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #1565c0;
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.seguimiento-boton-actualizar:hover:not(:disabled) {
+    background: #0b5394;
+}
+
+.seguimiento-boton-actualizar:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.seguimiento-resumen {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.seguimiento-tarjeta {
+    padding: 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+}
+
+.seguimiento-tarjeta span {
+    display: block;
+    margin-bottom: 7px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.seguimiento-tarjeta strong {
+    color: #0f172a;
+    font-size: 26px;
+}
+
+.seguimiento-contenedor {
+    padding: 22px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+}
+
+.seguimiento-filtros {
+    display: grid;
+    grid-template-columns: minmax(320px, 1fr) 260px;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.seguimiento-grupo-filtro {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.seguimiento-grupo-filtro label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.seguimiento-grupo-filtro input,
+.seguimiento-grupo-filtro select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    outline: none;
+}
+
+.seguimiento-grupo-filtro input:focus,
+.seguimiento-grupo-filtro select:focus {
+    border-color: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.12);
+}
+
+.seguimiento-estado {
+    padding: 30px;
+    text-align: center;
+    color: #64748b;
+}
+
+.seguimiento-error {
+    padding: 15px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-weight: 600;
+}
+
+.seguimiento-tabla-contenedor {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+}
+
+.seguimiento-tabla {
+    width: 100%;
+    min-width: 1700px;
+    border-collapse: collapse;
+}
+
+.seguimiento-tabla th {
+    padding: 13px 12px;
+    background: #1e293b;
+    color: #ffffff;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.seguimiento-tabla td {
+    padding: 13px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.seguimiento-tabla tbody tr:hover {
+    background: #f8fafc;
+}
+
+.seguimiento-tabla tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.seguimiento-tabla td small {
+    display: block;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 12px;
+}
+
+.seguimiento-fecha {
+    min-width: 150px;
+}
+
+.seguimiento-codigo-ot {
+    display: block;
+    min-width: 110px;
+    color: #0b5394;
+}
+
+.seguimiento-badge-evento {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.seguimiento-evento-asignacion {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.seguimiento-evento-ruta {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.seguimiento-evento-inicio {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.seguimiento-evento-suspension {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.seguimiento-evento-finalizacion {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.seguimiento-evento-cancelacion {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.seguimiento-evento-neutro {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.seguimiento-cambio {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 220px;
+}
+
+.seguimiento-cambio span {
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.seguimiento-cambio strong {
+    color: #64748b;
+}
+
+.seguimiento-responsable {
+    display: block;
+    min-width: 140px;
+    color: #1e293b;
+}
+
+.seguimiento-evidencias {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 18px;
+    background: #ede9fe;
+    color: #6d28d9;
+    font-weight: 700;
+}
+
+.seguimiento-comentario {
+    min-width: 280px;
+    max-width: 420px;
+    line-height: 1.45;
+}
+
+.seguimiento-sin-resultados {
+    padding: 30px !important;
+    text-align: center;
+    color: #64748b !important;
+}
+
+.seguimiento-paginacion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    margin-top: 20px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.seguimiento-botones-paginacion {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.seguimiento-botones-paginacion button {
+    padding: 9px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+}
+
+.seguimiento-botones-paginacion button:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+
+.seguimiento-botones-paginacion button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+@media (max-width: 900px) {
+    .seguimiento-filtros {
+        grid-template-columns: 1fr;
+    }
+
+    .seguimiento-resumen {
+        grid-template-columns: 1fr;
+    }
+
+    .seguimiento-paginacion {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 700px) {
+    .seguimiento-encabezado {
+        flex-direction: column;
+    }
+
+    .seguimiento-boton-actualizar {
+        width: 100%;
+    }
+
+    .seguimiento-contenedor {
+        padding: 15px;
+    }
+
+    .seguimiento-botones-paginacion {
+        width: 100%;
+        justify-content: space-between;
+    }
+}

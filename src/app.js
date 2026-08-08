@@ -41,6 +41,9 @@ const usuarioRoutes = require(
 const auditoriaRoutes = require(
     "./routes/auditoriaRoutes"
 );
+const seguimientoRoutes = require(
+    "./routes/seguimientoRoutes"
+);
 
 // =====================================
 // MIDDLEWARE DE AUTENTICACIÓN
@@ -145,6 +148,11 @@ app.use(
 app.use(
     "/api/auditoria",
     auditoriaRoutes
+);// =====================================
+// SEGUIMIENTO OT
+// =====================================
+app.use(
+    "/api/seguimiento",
+    seguimientoRoutes
 );
-
 module.exports = app;

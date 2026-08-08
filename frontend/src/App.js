@@ -15,6 +15,7 @@ import ImportarPage from "./pages/ImportarPage";
 import Tecnicos from "./pages/Tecnicos";
 import OrdenesPage from "./pages/OrdenesPage";
 import AsignacionesPage from "./pages/AsignacionesPage";
+import SeguimientoPage from "./pages/SeguimientoPage";
 import ReportesPage from "./pages/ReportesPage";
 import Mapa from "./pages/Mapa";
 import UsuariosPage from "./pages/UsuariosPage";
@@ -83,6 +84,21 @@ function App() {
                                     ]}
                                 >
                                     <AsignacionesPage />
+                                </RutaPorRol>
+                            }
+                        />
+
+                        <Route
+                            path="seguimiento"
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <SeguimientoPage />
                                 </RutaPorRol>
                             }
                         />
