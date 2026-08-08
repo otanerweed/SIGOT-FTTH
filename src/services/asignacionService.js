@@ -77,6 +77,7 @@ function construirObservacion(
         .join(" | ")
         .slice(0, 500);
 }
+
 // =====================================
 // REGISTRAR HISTORIAL DE ASIGNACIÓN
 // =====================================
@@ -184,6 +185,76 @@ async function registrarHistorialAsignacion(
             );
         `);
 }
+
+// =====================================
+// REGISTRAR SEGUIMIENTO DE ASIGNACIÓN
+// =====================================
+async function registrarSeguimientoAsignacion(
+    transaction,
+    {
+        idAsignacion,
+        evento,
+        estadoAnterior = null,
+        estadoNuevo = null,
+        comentario = null,
+        idUsuario
+    }
+) {
+    await new sql.Request(transaction)
+        .input(
+            "IdAsignacion",
+            sql.Int,
+            idAsignacion
+        )
+        .input(
+            "Evento",
+            sql.VarChar(50),
+            evento
+        )
+        .input(
+            "EstadoAnterior",
+            sql.VarChar(30),
+            estadoAnterior
+        )
+        .input(
+            "EstadoNuevo",
+            sql.VarChar(30),
+            estadoNuevo
+        )
+        .input(
+            "Comentario",
+            sql.VarChar(500),
+            comentario
+        )
+        .input(
+            "IdUsuario",
+            sql.Int,
+            idUsuario
+        )
+        .query(`
+            INSERT INTO dbo.SeguimientoOT
+            (
+                IdAsignacion,
+                Evento,
+                EstadoAnterior,
+                EstadoNuevo,
+                Comentario,
+                FechaEvento,
+                IdUsuario
+            )
+            VALUES
+            (
+                @IdAsignacion,
+                @Evento,
+                @EstadoAnterior,
+                @EstadoNuevo,
+                @Comentario,
+                GETDATE(),
+                @IdUsuario
+            );
+        `);
+}
+
 // =====================================
 // OBTENER TÉCNICO DENTRO DE TRANSACCIÓN
 // =====================================
@@ -692,6 +763,7 @@ async function asignarOrdenManualmente(
         const idAsignacion =
             resultadoAsignacion.recordset[0]
                 .IdAsignacion;
+
         await registrarHistorialAsignacion(
             transaction,
             {
@@ -706,6 +778,23 @@ async function asignarOrdenManualmente(
                     "Asignación manual realizada desde SIGOT-FTTH.",
                 idUsuario,
                 idActividad: null
+            }
+        );
+
+        await registrarSeguimientoAsignacion(
+            transaction,
+            {
+                idAsignacion,
+                evento: "ASIGNACION",
+                estadoAnterior: "SIN ASIGNAR",
+                estadoNuevo: "ACTIVA",
+                comentario:
+                    (
+                        `Asignación manual realizada a ` +
+                        `${tecnico.NombreCompleto} ` +
+                        `(${tecnico.CodigoTecnico}).`
+                    ),
+                idUsuario
             }
         );
 
@@ -1057,6 +1146,7 @@ async function reasignarOrden(
         const idNuevaAsignacion =
             resultadoNuevaAsignacion.recordset[0]
                 .IdAsignacion;
+
         await registrarHistorialAsignacion(
             transaction,
             {
@@ -1087,6 +1177,33 @@ async function reasignarOrden(
 
                 idActividad:
                     asignacionActual.IdActividad || null
+            }
+        );
+
+        await registrarSeguimientoAsignacion(
+            transaction,
+            {
+                idAsignacion:
+                    idNuevaAsignacion,
+
+                evento:
+                    "REASIGNACION",
+
+                estadoAnterior:
+                    "ACTIVA",
+
+                estadoNuevo:
+                    "ACTIVA",
+
+                comentario:
+                    (
+                        `OT reasignada de ` +
+                        `${asignacionActual.TecnicoActual} a ` +
+                        `${tecnicoNuevo.NombreCompleto}. ` +
+                        `Motivo: ${motivo}`
+                    ),
+
+                idUsuario
             }
         );
 
@@ -1228,6 +1345,7 @@ async function cancelarAsignacion(
                         A.IdAsignacion,
                         A.IdOrden,
                         A.IdTecnico,
+                        A.IdActividad,
                         A.Estado,
                         A.Observaciones,
 
@@ -1310,26 +1428,60 @@ async function cancelarAsignacion(
                 409
             );
         }
+
         await registrarHistorialAsignacion(
             transaction,
             {
                 idAsignacion,
                 idOrden:
                     asignacion.IdOrden,
+
                 idTecnicoAnterior:
                     asignacion.IdTecnico,
+
                 idTecnicoNuevo:
                     null,
+
                 evento:
                     "CANCELACION",
+
                 estadoAnterior:
                     "ACTIVA",
+
                 estadoNuevo:
                     "CANCELADA",
+
                 motivo,
+
                 idUsuario,
+
                 idActividad:
-                    null
+                    asignacion.IdActividad || null
+            }
+        );
+
+        await registrarSeguimientoAsignacion(
+            transaction,
+            {
+                idAsignacion,
+
+                evento:
+                    "CANCELACION",
+
+                estadoAnterior:
+                    "ACTIVA",
+
+                estadoNuevo:
+                    "CANCELADA",
+
+                comentario:
+                    (
+                        `Asignación del técnico ` +
+                        `${asignacion.Tecnico} cancelada. ` +
+                        `Motivo: ${motivo}`
+                    ),
+
+                idUsuario
             }
         );
 
@@ -1591,25 +1743,60 @@ async function asignarOrdenesAutomaticamente(
                 transaction,
                 {
                     idAsignacion,
+
                     idOrden:
                         orden.IdOrden,
+
                     idTecnicoAnterior:
                         null,
+
                     idTecnicoNuevo:
                         tecnico.IdTecnico,
+
                     evento:
                         "ASIGNACION_AUTOMATICA",
+
                     estadoAnterior:
                         null,
+
                     estadoNuevo:
                         "ACTIVA",
+
                     motivo:
                         "Asignación automática realizada por SIGOT-FTTH.",
+
                     idUsuario,
+
                     idActividad:
                         null
                 }
             );
+
+            await registrarSeguimientoAsignacion(
+                transaction,
+                {
+                    idAsignacion,
+
+                    evento:
+                        "ASIGNACION",
+
+                    estadoAnterior:
+                        "SIN ASIGNAR",
+
+                    estadoNuevo:
+                        "ACTIVA",
+
+                    comentario:
+                        (
+                            `Asignación automática realizada a ` +
+                            `${tecnico.NombreCompleto} ` +
+                            `(${tecnico.CodigoTecnico}).`
+                        ),
+
+                    idUsuario
+                }
+            );
+
             const resultadoActualizacion =
                 await new sql.Request(transaction)
                     .input(
