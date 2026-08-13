@@ -27,7 +27,7 @@ BEGIN
 
     PRINT 'Índice único creado correctamente.';
 END
-ELSEgit status
+ELSE
 BEGIN
     PRINT 'El índice único ya existe.';
 END;
