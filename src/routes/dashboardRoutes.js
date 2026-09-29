@@ -19,9 +19,23 @@ router.get(
         "Administrador",
         "Coordinador",
         "Supervisor",
-        "Consulta"
+        "Consulta",
+        "Jefe"
     ),
     dashboardController.obtenerResumen
+);
+
+// KPIs OPERATIVOS DE ACTIVIDADES OFSC
+router.get(
+    "/kpis",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador",
+        "Supervisor",
+        "Consulta",
+        "Jefe"
+    ),
+    dashboardController.obtenerKPIs
 );
 
 module.exports = router;

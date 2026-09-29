@@ -301,7 +301,183 @@ async function actualizarEstadoTecnico(req, res) {
         });
     }
 }
+function obtenerIdUsuarioAutenticado(req) {
+    const idUsuario = Number(
+        req.usuario?.idUsuario
+    );
 
+    return (
+        Number.isInteger(idUsuario) &&
+        idUsuario > 0
+    )
+        ? idUsuario
+        : null;
+}
+
+// ===============================
+// OBTENER DISPONIBILIDAD
+// ===============================
+async function obtenerDisponibilidad(req, res) {
+    try {
+        const { id } = req.params;
+
+        const tecnico =
+            await tecnicoModel.obtenerTecnicoPorId(id);
+
+        if (!tecnico) {
+            return res.status(404).json({
+                mensaje: "Técnico no encontrado"
+            });
+        }
+
+        const disponibilidad =
+            await tecnicoModel
+                .obtenerDisponibilidadTecnico(id);
+
+        return res.status(200).json({
+            tecnico: {
+                IdTecnico: tecnico.IdTecnico,
+                CodigoTecnico:
+                    tecnico.CodigoTecnico,
+                NombreCompleto:
+                    tecnico.NombreCompleto
+            },
+            disponibilidad
+        });
+    } catch (error) {
+        console.error(
+            "Error al obtener disponibilidad del técnico:",
+            error
+        );
+
+        return res.status(500).json({
+            mensaje:
+                "No se pudo obtener la disponibilidad del técnico."
+        });
+    }
+}
+
+// ===============================
+// GUARDAR DISPONIBILIDAD
+// ===============================
+async function guardarDisponibilidad(req, res) {
+    try {
+        const { id } = req.params;
+
+        const idUsuario =
+            obtenerIdUsuarioAutenticado(req);
+
+        if (!idUsuario) {
+            return res.status(401).json({
+                mensaje:
+                    "No se pudo identificar al usuario autenticado."
+            });
+        }
+
+        const tecnico =
+            await tecnicoModel.obtenerTecnicoPorId(id);
+
+        if (!tecnico) {
+            return res.status(404).json({
+                mensaje: "Técnico no encontrado"
+            });
+        }
+
+        if (!tecnico.Activo) {
+            return res.status(409).json({
+                mensaje:
+                    "No se puede registrar disponibilidad para un técnico inactivo."
+            });
+        }
+
+        const {
+            FechaVigencia,
+            DisponibleAM,
+            DisponiblePM,
+            NocturnoConfirmado,
+            Motivo,
+            Observaciones
+        } = req.body;
+
+        if (
+            !FechaVigencia ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(
+                String(FechaVigencia)
+            )
+        ) {
+            return res.status(400).json({
+                mensaje:
+                    "Debe indicar una fecha válida en formato AAAA-MM-DD."
+            });
+        }
+
+        if (
+            typeof DisponibleAM !== "boolean" ||
+            typeof DisponiblePM !== "boolean" ||
+            typeof NocturnoConfirmado !== "boolean"
+        ) {
+            return res.status(400).json({
+                mensaje:
+                    "Los campos de disponibilidad deben ser verdadero o falso."
+            });
+        }
+
+        const motivo = String(
+            Motivo || ""
+        ).trim();
+
+        const observaciones = String(
+            Observaciones || ""
+        ).trim();
+
+        if (motivo.length > 250) {
+            return res.status(400).json({
+                mensaje:
+                    "El motivo no puede superar 250 caracteres."
+            });
+        }
+
+        if (observaciones.length > 500) {
+            return res.status(400).json({
+                mensaje:
+                    "Las observaciones no pueden superar 500 caracteres."
+            });
+        }
+
+        const resultado =
+            await tecnicoModel
+                .guardarDisponibilidadTecnico(
+                    id,
+                    {
+                        FechaVigencia,
+                        DisponibleAM,
+                        DisponiblePM,
+                        NocturnoConfirmado,
+                        Motivo: motivo,
+                        Observaciones:
+                            observaciones
+                    },
+                    idUsuario
+                );
+
+        return res.status(200).json({
+            mensaje: resultado?.Creado
+                ? "Disponibilidad registrada correctamente."
+                : "Disponibilidad actualizada correctamente.",
+            disponibilidad: resultado
+        });
+    } catch (error) {
+        console.error(
+            "Error al guardar disponibilidad del técnico:",
+            error
+        );
+
+        return res.status(500).json({
+            mensaje:
+                "No se pudo guardar la disponibilidad del técnico."
+        });
+    }
+}
 // ===============================
 // EXPORTAR FUNCIONES
 // ===============================
@@ -310,5 +486,7 @@ module.exports = {
     obtenerTecnico,
     crearTecnico,
     actualizarTecnico,
-    actualizarEstadoTecnico
+    actualizarEstadoTecnico,
+    obtenerDisponibilidad,
+    guardarDisponibilidad
 };

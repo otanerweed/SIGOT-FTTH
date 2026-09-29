@@ -48,8 +48,14 @@ function Sidebar() {
 
     const puedeGestionarUsuarios =
         rol === "Administrador";
-
-    return (
+    const puedeVerControlOperativo = [
+        "Administrador",
+        "Coordinador",
+        "Supervisor",
+        "Consulta",
+        "Jefe"
+    ].includes(rol);
+        return (
         <aside className="sidebar">
             <h3>
                 Menú
@@ -70,11 +76,29 @@ function Sidebar() {
                     </li>
                 )}
 
-                <li>
-                    <NavLink to="/ordenes">
-                        📋 Órdenes
-                    </NavLink>
-                </li>
+                {[
+                    "Administrador",
+                    "Coordinador",
+                    "Supervisor"
+                ].includes(rol) && (
+                    <li>
+                        <NavLink to="/ordenes">
+                            📋 Órdenes
+                        </NavLink>
+                    </li>
+                )}
+
+                {[
+                    "Administrador",
+                    "Coordinador",
+                    "Supervisor"
+                ].includes(rol) && (
+                    <li>
+                        <NavLink to="/tss">
+                            🧰 TSS
+                        </NavLink>
+                    </li>
+                )}
 
                 {puedeGestionarTecnicos && (
                     <li>
@@ -100,6 +124,14 @@ function Sidebar() {
                     </li>
                 )}
 
+                {puedeVerControlOperativo && (
+                    <li>
+                        <NavLink to="/control-operativo">
+                            🕐 Control Operativo
+                        </NavLink>
+                    </li>
+                )}
+
                 {puedeVerMapa && (
                     <li>
                         <NavLink to="/mapa">
@@ -108,11 +140,17 @@ function Sidebar() {
                     </li>
                 )}
 
-                <li>
-                    <NavLink to="/reportes">
-                        📈 Reportes
-                    </NavLink>
-                </li>
+                {[
+                    "Administrador",
+                    "Coordinador",
+                    "Supervisor"
+                ].includes(rol) && (
+                    <li>
+                        <NavLink to="/reportes">
+                            📈 Reportes
+                        </NavLink>
+                    </li>
+                )}
 
                 {puedeVerAuditoria && (
                     <li>

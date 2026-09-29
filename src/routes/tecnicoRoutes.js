@@ -27,7 +27,15 @@ router.get(
     "/",
     tecnicoController.listarTecnicos
 );
+router.get(
+    "/:id/disponibilidad",
+    tecnicoController.obtenerDisponibilidad
+);
 
+router.put(
+    "/:id/disponibilidad",
+    tecnicoController.guardarDisponibilidad
+);
 // OBTENER TÉCNICO
 router.get(
     "/:id",

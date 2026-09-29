@@ -23,6 +23,10 @@ const mapaColumnas = {
     codigoServicio: [
         "Cod_Servicio"
     ],
+    codigoPuntoVenta: [
+        "Codigo Punto Venta",
+        "Código Punto Venta"
+    ],
 
     productoPlan: [
         "Producto/Plan contratado"
@@ -80,7 +84,9 @@ const mapaColumnas = {
     recursosXML: [
         "Recursos de red"
     ],
-
+    recurso: [
+        "Recurso"
+    ],
     rfs: [
         "ID Recurso de Servicio shm"
     ],

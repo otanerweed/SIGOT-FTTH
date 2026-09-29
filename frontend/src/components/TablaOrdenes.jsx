@@ -10,8 +10,7 @@ import {
 
 import "./TablaOrdenes.css";
 
-const REGISTROS_POR_PAGINA =
-    10;
+const REGISTROS_POR_PAGINA = 10;
 
 const ESTADOS_OT = [
     "PENDIENTE",
@@ -32,9 +31,7 @@ function obtenerTexto(valor) {
     ).trim();
 }
 
-function normalizarEstado(
-    estado
-) {
+function normalizarEstado(estado) {
     return obtenerTexto(
         estado
     )
@@ -46,9 +43,7 @@ function normalizarEstado(
         .toUpperCase();
 }
 
-function mostrarEstado(
-    estado
-) {
+function mostrarEstado(estado) {
     return obtenerTexto(
         estado
     ).replaceAll(
@@ -57,9 +52,7 @@ function mostrarEstado(
     );
 }
 
-function formatearFecha(
-    valor
-) {
+function formatearFecha(valor) {
     if (!valor) {
         return "Sin fecha";
     }
@@ -81,15 +74,12 @@ function formatearFecha(
         .toLocaleDateString(
             "es-PE",
             {
-                timeZone:
-                    "UTC"
+                timeZone: "UTC"
             }
         );
 }
 
-function formatearFechaHora(
-    valor
-) {
+function formatearFechaHora(valor) {
     if (!valor) {
         return "Sin registro";
     }
@@ -113,71 +103,56 @@ function formatearFechaHora(
         );
 }
 
-function obtenerClaseEstado(
-    estado
-) {
+function obtenerClaseEstado(estado) {
     const valor =
         normalizarEstado(
             estado
         );
 
     if (
-        valor ===
-            "FINALIZADA" ||
-        valor ===
-            "FINALIZADO"
+        valor === "FINALIZADA" ||
+        valor === "FINALIZADO"
     ) {
         return "badge-finalizada";
     }
 
     if (
-        valor ===
-            "CANCELADA" ||
-        valor ===
-            "CANCELADO" ||
-        valor ===
-            "CIERRE_AUTOMATICO"
+        valor === "CANCELADA" ||
+        valor === "CANCELADO" ||
+        valor === "CIERRE_AUTOMATICO"
     ) {
         return "badge-cancelada";
     }
 
     if (
-        valor ===
-        "REPROGRAMADA"
+        valor === "REPROGRAMADA"
     ) {
         return "badge-reprogramada";
     }
 
     if (
-        valor ===
-        "NO_REALIZADO"
+        valor === "NO_REALIZADO"
     ) {
         return "badge-no-realizado";
     }
 
     if (
-        valor ===
-        "SUSPENDIDA"
+        valor === "SUSPENDIDA"
     ) {
         return "badge-suspendida";
     }
 
     if (
-        valor ===
-            "INICIADA" ||
-        valor ===
-            "ACTIVA" ||
-        valor ===
-            "ASIGNADA"
+        valor === "INICIADA" ||
+        valor === "ACTIVA" ||
+        valor === "ASIGNADA"
     ) {
         return "badge-iniciada";
     }
 
     if (
-        valor ===
-            "PENDIENTE" ||
-        valor ===
-            "SIN ASIGNAR"
+        valor === "PENDIENTE" ||
+        valor === "SIN ASIGNAR"
     ) {
         return "badge-pendiente";
     }
@@ -185,6 +160,9 @@ function obtenerClaseEstado(
     return "badge-neutro";
 }
 
+// =====================================
+// COMPONENTE
+// =====================================
 function TablaOrdenes({
     ordenes = [],
     puedeGestionarEstados = false,
@@ -198,6 +176,11 @@ function TablaOrdenes({
     const [
         estadoSeleccionado,
         setEstadoSeleccionado
+    ] = useState("TODOS");
+
+    const [
+        proyectoSeleccionado,
+        setProyectoSeleccionado
     ] = useState("TODOS");
 
     const [
@@ -249,7 +232,7 @@ function TablaOrdenes({
     ] = useState("");
 
     // =====================================
-    // ESTADOS DE FILTRO
+    // ESTADOS DISPONIBLES
     // =====================================
     const estadosDisponibles =
         useMemo(() => {
@@ -270,7 +253,35 @@ function TablaOrdenes({
                     estados
                 )
             ].sort();
-        }, [ordenes]);
+        }, [
+            ordenes
+        ]);
+
+    // =====================================
+    // PROYECTOS DISPONIBLES
+    // =====================================
+    const proyectosDisponibles =
+        useMemo(() => {
+            const proyectos =
+                ordenes
+                    .map(
+                        (orden) =>
+                            obtenerTexto(
+                                orden.ProyectoCodigo
+                            )
+                    )
+                    .filter(
+                        Boolean
+                    );
+
+            return [
+                ...new Set(
+                    proyectos
+                )
+            ].sort();
+        }, [
+            ordenes
+        ]);
 
     // =====================================
     // FILTROS
@@ -289,11 +300,22 @@ function TablaOrdenes({
                             orden.EstadoOT
                         );
 
+                    const proyecto =
+                        obtenerTexto(
+                            orden.ProyectoCodigo
+                        ).toUpperCase();
+
                     const cumpleEstado =
                         estadoSeleccionado ===
                             "TODOS" ||
                         estadoOT ===
                             estadoSeleccionado;
+
+                    const cumpleProyecto =
+                        proyectoSeleccionado ===
+                            "TODOS" ||
+                        proyecto ===
+                            proyectoSeleccionado;
 
                     const contenido = [
                         orden.CodigoOT,
@@ -310,7 +332,9 @@ function TablaOrdenes({
                         orden.EstadoActividad,
                         orden.EstadoAsignacion,
                         orden.TipoCierre,
-                        orden.ResultadoNoRealizado
+                        orden.ResultadoNoRealizado,
+                        orden.ProyectoCodigo,
+                        orden.ProyectoNombre
                     ]
                         .map(
                             obtenerTexto
@@ -327,6 +351,7 @@ function TablaOrdenes({
 
                     return (
                         cumpleEstado &&
+                        cumpleProyecto &&
                         cumpleBusqueda
                     );
                 }
@@ -334,14 +359,16 @@ function TablaOrdenes({
         }, [
             ordenes,
             busqueda,
-            estadoSeleccionado
+            estadoSeleccionado,
+            proyectoSeleccionado
         ]);
 
     useEffect(() => {
         setPaginaActual(1);
     }, [
         busqueda,
-        estadoSeleccionado
+        estadoSeleccionado,
+        proyectoSeleccionado
     ]);
 
     // =====================================
@@ -351,8 +378,7 @@ function TablaOrdenes({
         Math.max(
             1,
             Math.ceil(
-                ordenesFiltradas
-                    .length /
+                ordenesFiltradas.length /
                 REGISTROS_POR_PAGINA
             )
         );
@@ -445,7 +471,9 @@ function TablaOrdenes({
     }
 
     function cerrarCambioEstado() {
-        if (guardandoEstado) {
+        if (
+            guardandoEstado
+        ) {
             return;
         }
 
@@ -470,7 +498,9 @@ function TablaOrdenes({
     ) {
         evento.preventDefault();
 
-        if (!nuevoEstado) {
+        if (
+            !nuevoEstado
+        ) {
             setErrorEstado(
                 "Debe seleccionar un nuevo estado."
             );
@@ -500,8 +530,7 @@ function TablaOrdenes({
 
             const respuesta =
                 await cambiarEstadoOrden(
-                    ordenCambioEstado
-                        .IdOrden,
+                    ordenCambioEstado.IdOrden,
                     nuevoEstado,
                     motivoEstado.trim()
                 );
@@ -528,6 +557,7 @@ function TablaOrdenes({
             ) {
                 await onActualizar();
             }
+
         } catch (
             errorPeticion
         ) {
@@ -543,6 +573,7 @@ function TablaOrdenes({
                     ?.mensaje ||
                 "No se pudo cambiar el estado de la orden."
             );
+
         } finally {
             setGuardandoEstado(
                 false
@@ -563,8 +594,7 @@ function TablaOrdenes({
 
             const actual =
                 normalizarEstado(
-                    ordenCambioEstado
-                        .EstadoOT
+                    ordenCambioEstado.EstadoOT
                 );
 
             return ESTADOS_OT.filter(
@@ -602,7 +632,12 @@ function TablaOrdenes({
                 )}
 
             <div className="ordenes-contenedor">
+
+                {/* =====================================
+                    RESUMEN
+                ===================================== */}
                 <div className="ordenes-resumen">
+
                     <div className="resumen-orden">
                         <span>
                             Total de órdenes
@@ -622,9 +657,50 @@ function TablaOrdenes({
                             {ordenesFiltradas.length}
                         </strong>
                     </div>
+
+                    <div className="resumen-orden">
+                        <span>
+                            RED ENTEL
+                        </span>
+
+                        <strong>
+                            {
+                                ordenes.filter(
+                                    (orden) =>
+                                        obtenerTexto(
+                                            orden.ProyectoCodigo
+                                        ).toUpperCase() ===
+                                        "RED_ENTEL"
+                                ).length
+                            }
+                        </strong>
+                    </div>
+
+                    <div className="resumen-orden">
+                        <span>
+                            RED WINET
+                        </span>
+
+                        <strong>
+                            {
+                                ordenes.filter(
+                                    (orden) =>
+                                        obtenerTexto(
+                                            orden.ProyectoCodigo
+                                        ).toUpperCase() ===
+                                        "RED_WINET"
+                                ).length
+                            }
+                        </strong>
+                    </div>
+
                 </div>
 
+                {/* =====================================
+                    FILTROS
+                ===================================== */}
                 <div className="ordenes-filtros">
+
                     <div className="filtro-grupo">
                         <label htmlFor="buscar-orden">
                             Buscar
@@ -633,18 +709,63 @@ function TablaOrdenes({
                         <input
                             id="buscar-orden"
                             type="search"
-                            placeholder="OT, cliente, distrito o técnico"
+                            placeholder="OT, cliente, distrito, técnico o proyecto"
                             value={
                                 busqueda
                             }
-                            onChange={(evento) =>
-                                setBusqueda(
-                                    evento
-                                        .target
-                                        .value
-                                )
+                            onChange={
+                                (evento) =>
+                                    setBusqueda(
+                                        evento.target.value
+                                    )
                             }
                         />
+                    </div>
+
+                    <div className="filtro-grupo">
+                        <label htmlFor="proyecto-orden">
+                            Proyecto
+                        </label>
+
+                        <select
+                            id="proyecto-orden"
+                            value={
+                                proyectoSeleccionado
+                            }
+                            onChange={
+                                (evento) =>
+                                    setProyectoSeleccionado(
+                                        evento.target.value
+                                    )
+                            }
+                        >
+                            <option value="TODOS">
+                                Todos
+                            </option>
+
+                            {proyectosDisponibles.map(
+                                (proyecto) => (
+                                    <option
+                                        key={
+                                            proyecto
+                                        }
+                                        value={
+                                            proyecto
+                                        }
+                                    >
+                                        {
+                                            proyecto ===
+                                            "RED_ENTEL"
+                                                ? "RED ENTEL"
+                                                : proyecto ===
+                                                  "RED_WINET"
+                                                    ? "RED WINET"
+                                                    : proyecto
+                                        }
+                                    </option>
+                                )
+                            )}
+                        </select>
                     </div>
 
                     <div className="filtro-grupo">
@@ -657,12 +778,11 @@ function TablaOrdenes({
                             value={
                                 estadoSeleccionado
                             }
-                            onChange={(evento) =>
-                                setEstadoSeleccionado(
-                                    evento
-                                        .target
-                                        .value
-                                )
+                            onChange={
+                                (evento) =>
+                                    setEstadoSeleccionado(
+                                        evento.target.value
+                                    )
                             }
                         >
                             <option value="TODOS">
@@ -679,37 +799,77 @@ function TablaOrdenes({
                                             estado
                                         }
                                     >
-                                        {mostrarEstado(
-                                            estado
-                                        )}
+                                        {
+                                            mostrarEstado(
+                                                estado
+                                            )
+                                        }
                                     </option>
                                 )
                             )}
                         </select>
                     </div>
+
                 </div>
 
+                {/* =====================================
+                    TABLA
+                ===================================== */}
                 <div className="tabla-responsive">
+
                     <table className="tabla-ordenes">
+
                         <thead>
                             <tr>
-                                <th>OT</th>
-                                <th>Cliente</th>
-                                <th>Distrito</th>
-                                <th>Agenda</th>
-                                <th>Técnico</th>
-                                <th>Estado OT</th>
-                                <th>Actividad OFSC</th>
-                                <th>Asignación</th>
-                                <th>Acciones</th>
+                                <th>
+                                    OT
+                                </th>
+
+                                <th>
+                                    Proyecto
+                                </th>
+
+                                <th>
+                                    Cliente
+                                </th>
+
+                                <th>
+                                    Distrito
+                                </th>
+
+                                <th>
+                                    Agenda
+                                </th>
+
+                                <th>
+                                    Técnico
+                                </th>
+
+                                <th>
+                                    Estado OT
+                                </th>
+
+                                <th>
+                                    Actividad OFSC
+                                </th>
+
+                                <th>
+                                    Asignación
+                                </th>
+
+                                <th>
+                                    Acciones
+                                </th>
                             </tr>
                         </thead>
 
                         <tbody>
+
                             {ordenesVisibles.length >
                             0 ? (
                                 ordenesVisibles.map(
                                     (orden) => {
+
                                         const estadoActual =
                                             normalizarEstado(
                                                 orden.EstadoOT
@@ -721,12 +881,19 @@ function TablaOrdenes({
                                             estadoActual ===
                                                 "CANCELADA";
 
+                                        const proyecto =
+                                            obtenerTexto(
+                                                orden.ProyectoCodigo
+                                            ).toUpperCase();
+
                                         return (
                                             <tr
                                                 key={
                                                     orden.IdOrden
                                                 }
                                             >
+
+                                                {/* OT */}
                                                 <td>
                                                     <div className="codigo-ot">
                                                         {
@@ -736,103 +903,155 @@ function TablaOrdenes({
 
                                                     <small>
                                                         Actividad:{" "}
-                                                        {orden.IdActividadOFSC ||
-                                                            "Sin registrar"}
+                                                        {
+                                                            orden.IdActividadOFSC ||
+                                                            "Sin registrar"
+                                                        }
                                                     </small>
                                                 </td>
 
+                                                {/* PROYECTO */}
+                                                <td>
+                                                    {proyecto ===
+                                                    "RED_ENTEL" ? (
+                                                        <span className="badge-proyecto badge-proyecto-entel">
+                                                            RED ENTEL
+                                                        </span>
+                                                    ) : proyecto ===
+                                                      "RED_WINET" ? (
+                                                        <span className="badge-proyecto badge-proyecto-winet">
+                                                            RED WINET
+                                                        </span>
+                                                    ) : (
+                                                        <span className="badge-proyecto badge-proyecto-sin">
+                                                            Sin proyecto
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* CLIENTE */}
                                                 <td>
                                                     <strong>
-                                                        {orden.Cliente ||
-                                                            "Sin cliente"}
+                                                        {
+                                                            orden.Cliente ||
+                                                            "Sin cliente"
+                                                        }
                                                     </strong>
 
                                                     <small>
-                                                        {orden.TipoServicio ||
-                                                            "Sin servicio"}
+                                                        {
+                                                            orden.TipoServicio ||
+                                                            "Sin servicio"
+                                                        }
                                                     </small>
                                                 </td>
 
+                                                {/* DISTRITO */}
                                                 <td>
-                                                    {orden.Distrito ||
-                                                        "Sin distrito"}
+                                                    {
+                                                        orden.Distrito ||
+                                                        "Sin distrito"
+                                                    }
                                                 </td>
 
+                                                {/* AGENDA */}
                                                 <td>
                                                     <div>
-                                                        {formatearFecha(
-                                                            orden.FechaAgenda
-                                                        )}
+                                                        {
+                                                            formatearFecha(
+                                                                orden.FechaAgenda
+                                                            )
+                                                        }
                                                     </div>
 
                                                     <small>
-                                                        {orden.Horario ||
-                                                            "Sin horario"}
+                                                        {
+                                                            orden.Horario ||
+                                                            "Sin horario"
+                                                        }
                                                     </small>
                                                 </td>
 
+                                                {/* TÉCNICO */}
                                                 <td>
                                                     <div>
-                                                        {orden.Tecnico ||
-                                                            "Sin asignar"}
+                                                        {
+                                                            orden.Tecnico ||
+                                                            "Sin asignar"
+                                                        }
                                                     </div>
 
                                                     <small>
-                                                        {orden.CodigoTecnico ||
-                                                            ""}
+                                                        {
+                                                            orden.CodigoTecnico ||
+                                                            ""
+                                                        }
                                                     </small>
                                                 </td>
 
+                                                {/* ESTADO OT */}
                                                 <td>
                                                     <span
                                                         className={`badge-estado ${obtenerClaseEstado(
                                                             orden.EstadoOT
                                                         )}`}
                                                     >
-                                                        {mostrarEstado(
-                                                            orden.EstadoOT ||
-                                                            "SIN ESTADO"
-                                                        )}
+                                                        {
+                                                            mostrarEstado(
+                                                                orden.EstadoOT ||
+                                                                "SIN ESTADO"
+                                                            )
+                                                        }
                                                     </span>
                                                 </td>
 
+                                                {/* ACTIVIDAD OFSC */}
                                                 <td>
                                                     <span
                                                         className={`badge-estado ${obtenerClaseEstado(
                                                             orden.EstadoActividad
                                                         )}`}
                                                     >
-                                                        {mostrarEstado(
-                                                            orden.EstadoActividad ||
-                                                            "SIN ACTIVIDAD"
-                                                        )}
+                                                        {
+                                                            mostrarEstado(
+                                                                orden.EstadoActividad ||
+                                                                "SIN ACTIVIDAD"
+                                                            )
+                                                        }
                                                     </span>
 
                                                     {orden.TipoCierre && (
                                                         <small className="detalle-cierre">
                                                             Cierre:{" "}
-                                                            {mostrarEstado(
-                                                                orden.TipoCierre
-                                                            )}
+                                                            {
+                                                                mostrarEstado(
+                                                                    orden.TipoCierre
+                                                                )
+                                                            }
                                                         </small>
                                                     )}
                                                 </td>
 
+                                                {/* ASIGNACIÓN */}
                                                 <td>
                                                     <span
                                                         className={`badge-estado ${obtenerClaseEstado(
                                                             orden.EstadoAsignacion
                                                         )}`}
                                                     >
-                                                        {mostrarEstado(
-                                                            orden.EstadoAsignacion ||
-                                                            "SIN ASIGNAR"
-                                                        )}
+                                                        {
+                                                            mostrarEstado(
+                                                                orden.EstadoAsignacion ||
+                                                                "SIN ASIGNAR"
+                                                            )
+                                                        }
                                                     </span>
                                                 </td>
 
+                                                {/* ACCIONES */}
                                                 <td>
                                                     <div className="acciones-orden">
+
                                                         <button
                                                             type="button"
                                                             className="boton-detalle"
@@ -858,13 +1077,17 @@ function TablaOrdenes({
                                                                     )
                                                                 }
                                                             >
-                                                                {estadoDefinitivo
-                                                                    ? "Estado definitivo"
-                                                                    : "Cambiar estado"}
+                                                                {
+                                                                    estadoDefinitivo
+                                                                        ? "Estado definitivo"
+                                                                        : "Cambiar estado"
+                                                                }
                                                             </button>
                                                         )}
+
                                                     </div>
                                                 </td>
+
                                             </tr>
                                         );
                                     }
@@ -872,20 +1095,27 @@ function TablaOrdenes({
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan="9"
+                                        colSpan="10"
                                         className="sin-resultados"
                                     >
                                         No se encontraron órdenes con los filtros seleccionados.
                                     </td>
                                 </tr>
                             )}
+
                         </tbody>
+
                     </table>
+
                 </div>
 
+                {/* =====================================
+                    PAGINACIÓN
+                ===================================== */}
                 {ordenesFiltradas.length >
                     0 && (
                     <div className="tabla-paginacion">
+
                         <span>
                             Mostrando{" "}
                             {indiceInicial + 1} a{" "}
@@ -898,6 +1128,7 @@ function TablaOrdenes({
                         </span>
 
                         <div className="paginacion-botones">
+
                             <button
                                 type="button"
                                 disabled={
@@ -909,8 +1140,7 @@ function TablaOrdenes({
                                         (
                                             pagina
                                         ) =>
-                                            pagina -
-                                            1
+                                            pagina - 1
                                     )
                                 }
                             >
@@ -934,13 +1164,13 @@ function TablaOrdenes({
                                         (
                                             pagina
                                         ) =>
-                                            pagina +
-                                            1
+                                            pagina + 1
                                     )
                                 }
                             >
                                 Siguiente
                             </button>
+
                         </div>
                     </div>
                 )}
@@ -958,12 +1188,14 @@ function TablaOrdenes({
                 >
                     <div
                         className="modal-orden"
-                        onClick={(evento) =>
-                            evento
-                                .stopPropagation()
+                        onClick={
+                            (evento) =>
+                                evento.stopPropagation()
                         }
                     >
+
                         <div className="modal-encabezado">
+
                             <div>
                                 <h2>
                                     OT{" "}
@@ -986,121 +1218,58 @@ function TablaOrdenes({
                             >
                                 ×
                             </button>
+
                         </div>
 
                         <div className="modal-contenido">
+
+                            {/* =====================================
+                                PROYECTO
+                            ===================================== */}
                             <section className="detalle-seccion">
+
                                 <h3>
-                                    Cliente
+                                    Proyecto
                                 </h3>
 
                                 <div className="detalle-grid">
+
                                     <div>
                                         <span>
-                                            Nombre
+                                            Red
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.Cliente ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.ProyectoNombre ||
+                                                "Sin proyecto asignado"
+                                            }
                                         </strong>
                                     </div>
 
                                     <div>
                                         <span>
-                                            DNI
+                                            Código
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.DNI ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.ProyectoCodigo ||
+                                                "Sin proyecto"
+                                            }
                                         </strong>
                                     </div>
 
                                     <div>
                                         <span>
-                                            Teléfono
+                                            Id proyecto
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.Telefono ||
-                                                "Sin dato"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Distrito
-                                        </span>
-
-                                        <strong>
-                                            {ordenSeleccionada.Distrito ||
-                                                "Sin dato"}
-                                        </strong>
-                                    </div>
-                                </div>
-
-                                <div className="detalle-direccion">
-                                    <span>
-                                        Dirección
-                                    </span>
-
-                                    <strong>
-                                        {ordenSeleccionada.Direccion ||
-                                            "Sin dato"}
-                                    </strong>
-                                </div>
-                            </section>
-
-                            <section className="detalle-seccion">
-                                <h3>
-                                    Orden de trabajo
-                                </h3>
-
-                                <div className="detalle-grid">
-                                    <div>
-                                        <span>
-                                            Estado OT
-                                        </span>
-
-                                        <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.EstadoOT ||
-                                                "Sin dato"
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Servicio
-                                        </span>
-
-                                        <strong>
-                                            {ordenSeleccionada.CodigoServicio ||
-                                                "Sin dato"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Tipo de servicio
-                                        </span>
-
-                                        <strong>
-                                            {ordenSeleccionada.TipoServicio ||
-                                                "Sin dato"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Producto o plan
-                                        </span>
-
-                                        <strong>
-                                            {ordenSeleccionada.ProductoPlan ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.IdProyecto ||
+                                                "Sin asignar"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1110,8 +1279,161 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.RFS ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.RFS ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                            </section>
+
+                            {/* =====================================
+                                CLIENTE
+                            ===================================== */}
+                            <section className="detalle-seccion">
+
+                                <h3>
+                                    Cliente
+                                </h3>
+
+                                <div className="detalle-grid">
+
+                                    <div>
+                                        <span>
+                                            Nombre
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.Cliente ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            DNI
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.DNI ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Teléfono
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.Telefono ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Distrito
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.Distrito ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                </div>
+
+                                <div className="detalle-direccion">
+
+                                    <span>
+                                        Dirección
+                                    </span>
+
+                                    <strong>
+                                        {
+                                            ordenSeleccionada.Direccion ||
+                                            "Sin dato"
+                                        }
+                                    </strong>
+
+                                </div>
+
+                            </section>
+
+                            {/* =====================================
+                                ORDEN DE TRABAJO
+                            ===================================== */}
+                            <section className="detalle-seccion">
+
+                                <h3>
+                                    Orden de trabajo
+                                </h3>
+
+                                <div className="detalle-grid">
+
+                                    <div>
+                                        <span>
+                                            Estado OT
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.EstadoOT ||
+                                                    "Sin dato"
+                                                )
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Servicio
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.CodigoServicio ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Tipo de servicio
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.TipoServicio ||
+                                                "Sin dato"
+                                            }
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Producto o plan
+                                        </span>
+
+                                        <strong>
+                                            {
+                                                ordenSeleccionada.ProductoPlan ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1121,9 +1443,11 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {formatearFecha(
-                                                ordenSeleccionada.FechaAgenda
-                                            )}
+                                            {
+                                                formatearFecha(
+                                                    ordenSeleccionada.FechaAgenda
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1133,27 +1457,38 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.Horario ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.Horario ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
+
                                 </div>
+
                             </section>
 
+                            {/* =====================================
+                                ACTIVIDAD OFSC
+                            ===================================== */}
                             <section className="detalle-seccion">
+
                                 <h3>
                                     Actividad OFSC
                                 </h3>
 
                                 <div className="detalle-grid">
+
                                     <div>
                                         <span>
                                             ID actividad
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.IdActividadOFSC ||
-                                                "Sin actividad"}
+                                            {
+                                                ordenSeleccionada.IdActividadOFSC ||
+                                                "Sin actividad"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1163,10 +1498,12 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.EstadoActividad ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.EstadoActividad ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1176,10 +1513,12 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.ResultadoNoRealizado ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.ResultadoNoRealizado ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1189,10 +1528,12 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.TipoCierre ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.TipoCierre ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1202,8 +1543,10 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.HoraInicio ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.HoraInicio ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1213,40 +1556,55 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.HoraFin ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.HoraFin ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
+
                                 </div>
 
                                 <div className="detalle-direccion">
+
                                     <span>
                                         Motivo
                                     </span>
 
                                     <strong>
-                                        {ordenSeleccionada.MotivoCancelacion ||
+                                        {
+                                            ordenSeleccionada.MotivoCancelacion ||
                                             ordenSeleccionada.Motivo ||
                                             ordenSeleccionada.RazonReagenda ||
-                                            "Sin motivo registrado"}
+                                            "Sin motivo registrado"
+                                        }
                                     </strong>
+
                                 </div>
+
                             </section>
 
+                            {/* =====================================
+                                ASIGNACIÓN ACTUAL
+                            ===================================== */}
                             <section className="detalle-seccion">
+
                                 <h3>
                                     Asignación actual
                                 </h3>
 
                                 <div className="detalle-grid">
+
                                     <div>
                                         <span>
                                             Técnico
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.Tecnico ||
-                                                "Sin asignar"}
+                                            {
+                                                ordenSeleccionada.Tecnico ||
+                                                "Sin asignar"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1256,8 +1614,10 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.CodigoTecnico ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.CodigoTecnico ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1267,10 +1627,12 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.EstadoAsignacion ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.EstadoAsignacion ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1280,23 +1642,30 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.EstadoAsignacionTecnico ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.EstadoAsignacionTecnico ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
+
                                 </div>
 
                                 <div className="detalle-direccion">
+
                                     <span>
                                         Observaciones
                                     </span>
 
                                     <strong>
-                                        {ordenSeleccionada.ObservacionesAsignacion ||
-                                            "Sin observaciones"}
+                                        {
+                                            ordenSeleccionada.ObservacionesAsignacion ||
+                                            "Sin observaciones"
+                                        }
                                     </strong>
+
                                 </div>
 
                                 <h3 className="titulo-historial-asignacion">
@@ -1304,14 +1673,17 @@ function TablaOrdenes({
                                 </h3>
 
                                 <div className="detalle-grid">
+
                                     <div>
                                         <span>
                                             Técnico
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.UltimoTecnico ||
-                                                "Sin registro"}
+                                            {
+                                                ordenSeleccionada.UltimoTecnico ||
+                                                "Sin registro"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1321,8 +1693,10 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.CodigoUltimoTecnico ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.CodigoUltimoTecnico ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1332,10 +1706,12 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.UltimoTipoAsignacion ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.UltimoTipoAsignacion ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
 
@@ -1345,40 +1721,55 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {mostrarEstado(
-                                                ordenSeleccionada.UltimoEstadoAsignacionTecnico ||
-                                                "Sin dato"
-                                            )}
+                                            {
+                                                mostrarEstado(
+                                                    ordenSeleccionada.UltimoEstadoAsignacionTecnico ||
+                                                    "Sin dato"
+                                                )
+                                            }
                                         </strong>
                                     </div>
+
                                 </div>
 
                                 <div className="detalle-direccion">
+
                                     <span>
                                         Observaciones de la última asignación
                                     </span>
 
                                     <strong>
-                                        {ordenSeleccionada.UltimasObservacionesAsignacion ||
-                                            "Sin observaciones"}
+                                        {
+                                            ordenSeleccionada.UltimasObservacionesAsignacion ||
+                                            "Sin observaciones"
+                                        }
                                     </strong>
+
                                 </div>
+
                             </section>
 
+                            {/* =====================================
+                                ACTUALIZACIÓN
+                            ===================================== */}
                             <section className="detalle-seccion">
+
                                 <h3>
                                     Actualización
                                 </h3>
 
                                 <div className="detalle-grid">
+
                                     <div>
                                         <span>
                                             Archivo importado
                                         </span>
 
                                         <strong>
-                                            {ordenSeleccionada.NombreArchivo ||
-                                                "Sin dato"}
+                                            {
+                                                ordenSeleccionada.NombreArchivo ||
+                                                "Sin dato"
+                                            }
                                         </strong>
                                     </div>
 
@@ -1388,14 +1779,19 @@ function TablaOrdenes({
                                         </span>
 
                                         <strong>
-                                            {formatearFechaHora(
-                                                ordenSeleccionada.FechaActualizacionActividad ||
-                                                ordenSeleccionada.FechaActualizacion
-                                            )}
+                                            {
+                                                formatearFechaHora(
+                                                    ordenSeleccionada.FechaActualizacionActividad ||
+                                                    ordenSeleccionada.FechaActualizacion
+                                                )
+                                            }
                                         </strong>
                                     </div>
+
                                 </div>
+
                             </section>
+
                         </div>
                     </div>
                 </div>
@@ -1408,17 +1804,22 @@ function TablaOrdenes({
                 ordenCambioEstado && (
                     <div
                         className="modal-overlay modal-overlay-estado"
-                        onMouseDown={(evento) => {
-                            if (
-                                evento.target ===
-                                evento.currentTarget
-                            ) {
-                                cerrarCambioEstado();
+                        onMouseDown={
+                            (evento) => {
+                                if (
+                                    evento.target ===
+                                    evento.currentTarget
+                                ) {
+                                    cerrarCambioEstado();
+                                }
                             }
-                        }}
+                        }
                     >
+
                         <div className="modal-cambio-estado">
+
                             <div className="modal-encabezado">
+
                                 <div>
                                     <h2>
                                         Cambiar estado
@@ -1444,6 +1845,7 @@ function TablaOrdenes({
                                 >
                                     ×
                                 </button>
+
                             </div>
 
                             <form
@@ -1452,30 +1854,47 @@ function TablaOrdenes({
                                     guardarCambioEstado
                                 }
                             >
+
                                 {errorEstado && (
                                     <div className="mensaje-modal-estado-error">
-                                        {errorEstado}
+                                        {
+                                            errorEstado
+                                        }
                                     </div>
                                 )}
 
                                 <div className="estado-actual-card">
+
                                     <span>
                                         Estado actual
                                     </span>
 
                                     <strong>
-                                        {mostrarEstado(
-                                            ordenCambioEstado.EstadoOT
-                                        )}
+                                        {
+                                            mostrarEstado(
+                                                ordenCambioEstado.EstadoOT
+                                            )
+                                        }
                                     </strong>
 
                                     <small>
-                                        {ordenCambioEstado.Cliente ||
-                                            "Sin cliente"}
+                                        {
+                                            ordenCambioEstado.Cliente ||
+                                            "Sin cliente"
+                                        }
                                     </small>
+
+                                    <small>
+                                        {
+                                            ordenCambioEstado.ProyectoNombre ||
+                                            "Sin proyecto"
+                                        }
+                                    </small>
+
                                 </div>
 
                                 <div className="campo-estado-ot">
+
                                     <label htmlFor="nuevo-estado-ot">
                                         Nuevo estado
                                     </label>
@@ -1488,14 +1907,14 @@ function TablaOrdenes({
                                         disabled={
                                             guardandoEstado
                                         }
-                                        onChange={(evento) =>
-                                            setNuevoEstado(
-                                                evento
-                                                    .target
-                                                    .value
-                                            )
+                                        onChange={
+                                            (evento) =>
+                                                setNuevoEstado(
+                                                    evento.target.value
+                                                )
                                         }
                                     >
+
                                         <option value="">
                                             Seleccione un estado
                                         </option>
@@ -1510,16 +1929,21 @@ function TablaOrdenes({
                                                         estado
                                                     }
                                                 >
-                                                    {mostrarEstado(
-                                                        estado
-                                                    )}
+                                                    {
+                                                        mostrarEstado(
+                                                            estado
+                                                        )
+                                                    }
                                                 </option>
                                             )
                                         )}
+
                                     </select>
+
                                 </div>
 
                                 <div className="campo-estado-ot">
+
                                     <label htmlFor="motivo-estado-ot">
                                         Motivo
                                     </label>
@@ -1535,18 +1959,21 @@ function TablaOrdenes({
                                         value={
                                             motivoEstado
                                         }
-                                        onChange={(evento) =>
-                                            setMotivoEstado(
-                                                evento
-                                                    .target
-                                                    .value
-                                            )
+                                        onChange={
+                                            (evento) =>
+                                                setMotivoEstado(
+                                                    evento.target.value
+                                                )
                                         }
                                     />
 
                                     <small>
-                                        {motivoEstado.length}/500 caracteres
+                                        {
+                                            motivoEstado.length
+                                        }
+                                        /500 caracteres
                                     </small>
+
                                 </div>
 
                                 {(
@@ -1570,6 +1997,7 @@ function TablaOrdenes({
                                     )}
 
                                 <div className="acciones-cambio-estado">
+
                                     <button
                                         type="button"
                                         className="boton-volver-estado"
@@ -1591,19 +2019,24 @@ function TablaOrdenes({
                                             !nuevoEstado ||
                                             motivoEstado
                                                 .trim()
-                                                .length <
-                                                5
+                                                .length < 5
                                         }
                                     >
-                                        {guardandoEstado
-                                            ? "Guardando..."
-                                            : "Confirmar cambio"}
+                                        {
+                                            guardandoEstado
+                                                ? "Guardando..."
+                                                : "Confirmar cambio"
+                                        }
                                     </button>
+
                                 </div>
+
                             </form>
+
                         </div>
                     </div>
                 )}
+
         </>
     );
 }

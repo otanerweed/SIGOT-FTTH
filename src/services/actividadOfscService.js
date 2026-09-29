@@ -316,106 +316,232 @@ function resolverEventoActividad(actividad) {
 }
 
 /**
- * Compara una actividad guardada con la
- * actividad recibida desde OFSC.
+ * Obtiene los cambios reales de una actividad
+ * usando los mismos valores normalizados que
+ * posteriormente se guardan en la base de datos.
  */
-function actividadTieneCambios(
+function obtenerCambiosActividad(
     existente,
     actividad,
-    resultadoNoRealizado
+    resultadoNoRealizado,
+    idActividadOFSC
 ) {
-    return (
-        textoComparable(
-            existente.EstadoActividad
-        ) !==
-            textoComparable(
-                actividad.estadoActividad
-            ) ||
+    const prefijoCampo =
+        `ActividadOFSC[${idActividadOFSC}].`;
 
-        fechaComparable(
-            existente.FechaActividadISO
-        ) !==
-            fechaComparable(
-                actividad.fechaActividad
-            ) ||
+    const candidatosCambio = [
+        {
+            campo: "IdActividadOFSC",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.IdActividadOFSC
+                ),
+            valorNuevo:
+                textoComparable(
+                    idActividadOFSC
+                )
+        },
+        {
+            campo: "EstadoActividad",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.EstadoActividad
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .estadoActividad
+                )
+        },
+        {
+            campo: "FechaActividad",
+            valorAnterior:
+                fechaComparable(
+                    existente
+                        ?.FechaActividadISO
+                ),
+            valorNuevo:
+                fechaComparable(
+                    actividad
+                        .fechaActividad
+                )
+        },
+        {
+            campo: "HoraInicio",
+            valorAnterior:
+                horaComparable(
+                    existente
+                        ?.HoraInicioTexto
+                ),
+            valorNuevo:
+                horaComparable(
+                    actividad
+                        .horaInicio
+                )
+        },
+        {
+            campo: "HoraFin",
+            valorAnterior:
+                horaComparable(
+                    existente
+                        ?.HoraFinTexto
+                ),
+            valorNuevo:
+                horaComparable(
+                    actividad
+                        .horaFin
+                )
+        },
+        {
+            campo: "FlagReagenda",
+            valorAnterior:
+                booleanoComparable(
+                    existente
+                        ?.FlagReagenda
+                ),
+            valorNuevo:
+                booleanoComparable(
+                    actividad
+                        .flagReagenda
+                )
+        },
+        {
+            campo: "RazonReagenda",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.RazonReagenda
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .razonReagenda
+                )
+        },
+        {
+            campo:
+                "ResultadoNoRealizado",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.ResultadoNoRealizado
+                ),
+            valorNuevo:
+                textoComparable(
+                    resultadoNoRealizado
+                )
+        },
+        {
+            campo: "Motivo",
+            valorAnterior:
+                textoComparable(
+                    existente?.Motivo
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad.motivo
+                )
+        },
+        {
+            campo:
+                "MotivoCancelacion",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.MotivoCancelacion
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .motivoCancelacion
+                )
+        },
+        {
+            campo: "TipoCierre",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.TipoCierre
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .tipoCierre
+                )
+        },
+        {
+            campo: "ResultadoGlobal",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.ResultadoGlobal
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .resultadoGlobal
+                )
+        },
+        {
+            campo:
+                "ResponsableSuspension",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.ResponsableSuspension
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .responsableSuspension
+                )
+        },
+        {
+            campo: "TipoSuspension",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.TipoSuspension
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .tipoSuspension
+                )
+        },
+        {
+            campo: "Recurso",
+            valorAnterior:
+                textoComparable(
+                    existente
+                        ?.Recurso
+                ),
+            valorNuevo:
+                textoComparable(
+                    actividad
+                        .recurso
+                )
+        }
+        
+    ];
 
-        horaComparable(
-            existente.HoraInicioTexto
-        ) !==
-            horaComparable(
-                actividad.horaInicio
-            ) ||
-
-        horaComparable(
-            existente.HoraFinTexto
-        ) !==
-            horaComparable(
-                actividad.horaFin
-            ) ||
-
-        booleanoComparable(
-            existente.FlagReagenda
-        ) !==
-            booleanoComparable(
-                actividad.flagReagenda
-            ) ||
-
-        textoComparable(
-            existente.RazonReagenda
-        ) !==
-            textoComparable(
-                actividad.razonReagenda
-            ) ||
-
-        textoComparable(
-            existente.ResultadoNoRealizado
-        ) !==
-            textoComparable(
-                resultadoNoRealizado
-            ) ||
-
-        textoComparable(
-            existente.Motivo
-        ) !==
-            textoComparable(
-                actividad.motivo
-            ) ||
-
-        textoComparable(
-            existente.MotivoCancelacion
-        ) !==
-            textoComparable(
-                actividad.motivoCancelacion
-            ) ||
-
-        textoComparable(
-            existente.TipoCierre
-        ) !==
-            textoComparable(
-                actividad.tipoCierre
-            ) ||
-
-        textoComparable(
-            existente.ResultadoGlobal
-        ) !==
-            textoComparable(
-                actividad.resultadoGlobal
-            ) ||
-
-        textoComparable(
-            existente.ResponsableSuspension
-        ) !==
-            textoComparable(
-                actividad.responsableSuspension
-            ) ||
-
-        textoComparable(
-            existente.TipoSuspension
-        ) !==
-            textoComparable(
-                actividad.tipoSuspension
-            )
-    );
+    return candidatosCambio
+        .filter(
+            (cambio) =>
+                cambio.valorAnterior !==
+                cambio.valorNuevo
+        )
+        .map((cambio) => ({
+            campo:
+                prefijoCampo +
+                cambio.campo,
+            valorAnterior:
+                cambio.valorAnterior,
+            valorNuevo:
+                cambio.valorNuevo
+        }));
 }
 
 /**
@@ -509,13 +635,10 @@ async function guardarActividadOFSC(
                     TipoCierre,
                     ResultadoGlobal,
                     ResponsableSuspension,
-                    TipoSuspension
+                    TipoSuspension,
+                    Recurso
 
                 FROM dbo.ActividadesOFSC
-                    WITH (
-                        UPDLOCK,
-                        HOLDLOCK
-                    )
 
                 WHERE IdActividadOFSC =
                     @IdActividadOFSC;
@@ -538,6 +661,14 @@ async function guardarActividadOFSC(
             `a otra orden de trabajo.`
         );
     }
+
+    const cambiosActividad =
+        obtenerCambiosActividad(
+            actividadExistente,
+            actividad,
+            resultadoNoRealizado,
+            idActividadOFSC
+        );
 
     /*
      * Insertar actividad nueva.
@@ -660,6 +791,14 @@ async function guardarActividadOFSC(
                     )
                 )
 
+                .input(
+                    "Recurso",
+                    sql.VarChar(150),
+                    limpiarTexto(
+                        actividad.recurso
+                    )
+                )
+
                 .query(`
                     INSERT INTO dbo.ActividadesOFSC
                     (
@@ -678,7 +817,8 @@ async function guardarActividadOFSC(
                         TipoCierre,
                         ResultadoGlobal,
                         ResponsableSuspension,
-                        TipoSuspension
+                        TipoSuspension,
+                        Recurso
                     )
                     OUTPUT INSERTED.IdActividad
                     VALUES
@@ -707,7 +847,8 @@ async function guardarActividadOFSC(
                         @TipoCierre,
                         @ResultadoGlobal,
                         @ResponsableSuspension,
-                        @TipoSuspension
+                        @TipoSuspension,
+                        @Recurso
                     );
                 `);
 
@@ -719,6 +860,8 @@ async function guardarActividadOFSC(
             insertada: true,
             actualizada: false,
             sinCambios: false,
+            cambios:
+                cambiosActividad,
 
             estadoOT:
                 resolverEstadoOrdenDesdeActividad(
@@ -735,11 +878,7 @@ async function guardarActividadOFSC(
     }
 
     const hayCambios =
-        actividadTieneCambios(
-            actividadExistente,
-            actividad,
-            resultadoNoRealizado
-        );
+        cambiosActividad.length > 0;
 
     /*
      * La actividad ya existe y no cambió.
@@ -752,6 +891,7 @@ async function guardarActividadOFSC(
             insertada: false,
             actualizada: false,
             sinCambios: true,
+            cambios: [],
 
             estadoOT:
                 resolverEstadoOrdenDesdeActividad(
@@ -880,6 +1020,14 @@ async function guardarActividadOFSC(
             )
         )
 
+
+        .input(
+            "Recurso",
+            sql.VarChar(150),
+            limpiarTexto(
+                actividad.recurso
+            )
+        )
         .query(`
             UPDATE dbo.ActividadesOFSC
             SET
@@ -930,6 +1078,9 @@ async function guardarActividadOFSC(
 
                 TipoSuspension =
                     @TipoSuspension,
+                
+                Recurso =
+                @Recurso,
 
                 FechaActualizacion =
                     SYSDATETIME()
@@ -945,6 +1096,8 @@ async function guardarActividadOFSC(
         insertada: false,
         actualizada: true,
         sinCambios: false,
+        cambios:
+            cambiosActividad,
 
         estadoOT:
             resolverEstadoOrdenDesdeActividad(
@@ -962,6 +1115,7 @@ async function guardarActividadOFSC(
 
 module.exports = {
     guardarActividadOFSC,
+    obtenerCambiosActividad,
     resolverEstadoOrdenDesdeActividad,
     resolverEventoActividad,
     resolverResultadoNoRealizado

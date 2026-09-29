@@ -941,6 +941,16 @@
     background: #e2e8f0;
 }
 
+.dashboardWinetEtiqueta--pendiente {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.dashboardWinetEtiqueta--enRuta {
+    color: #6d28d9;
+    background: #ede9fe;
+}
+
 .dashboardWinetEtiqueta--reprogramada {
     color: #b45309;
     background: #fef3c7;

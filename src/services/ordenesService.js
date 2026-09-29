@@ -7,6 +7,16 @@ const {
     resolverEstadoOrdenDesdeActividad,
     resolverEventoActividad
 } = require("./actividadOfscService");
+const {
+    registrarDetalleImportacion,
+    registrarCambiosOFSC,
+    crearTSSInicial,
+    requiereTSSInicial
+} = require("./importacionV2Service");
+
+const {
+    registrarHistorialAsignacion
+} = require("./historialAsignacionService");
 
 /**
  * Limpia valores de texto.
@@ -168,14 +178,14 @@ function fechaComparable(valor) {
     }
 
     const anio =
-        fecha.getFullYear();
+        fecha.getUTCFullYear();
 
     const mes = String(
-        fecha.getMonth() + 1
+        fecha.getUTCMonth() + 1
     ).padStart(2, "0");
 
     const dia = String(
-        fecha.getDate()
+        fecha.getUTCDate()
     ).padStart(2, "0");
 
     return `${anio}-${mes}-${dia}`;
@@ -329,6 +339,7 @@ async function buscarOrden(
                     ot.IdOperacion,
                     ot.CodigoOT,
                     ot.CodigoServicio,
+                    ot.CodigoPuntoVenta,
                     ot.ProductoPlan,
                     ot.TipoServicio,
                     ot.Cliente,
@@ -352,10 +363,6 @@ async function buscarOrden(
                         AS IdUltimaAsignacion
 
                 FROM dbo.OrdenesTrabajo ot
-                    WITH (
-                        UPDLOCK,
-                        HOLDLOCK
-                    )
 
                 OUTER APPLY
                 (
@@ -435,7 +442,15 @@ async function insertarOrden(
                     actividad.codigoServicio
                 )
             )
-
+            
+            .input(
+                "CodigoPuntoVenta",
+                sql.VarChar(20),
+                limpiarTexto(
+                    actividad.codigoPuntoVenta
+                )
+            )
+           
             .input(
                 "ProductoPlan",
                 sql.VarChar(150),
@@ -532,7 +547,7 @@ async function insertarOrden(
 
             .input(
                 "Horario",
-                sql.VarChar(20),
+                sql.VarChar(50),
                 limpiarTexto(
                     actividad.horario
                 )
@@ -551,11 +566,32 @@ async function insertarOrden(
             )
 
             .query(`
+                DECLARE @IdProyectoDetectado INT = NULL;
+
+                IF NULLIF(LTRIM(RTRIM(@RFS)), '') IS NOT NULL
+                BEGIN
+                    SELECT TOP 1
+                        @IdProyectoDetectado = IdProyecto
+                    FROM dbo.Proyectos
+                    WHERE Codigo = 'RED_ENTEL'
+                    AND Activo = 1;
+                END
+                ELSE
+                BEGIN
+                    SELECT TOP 1
+                        @IdProyectoDetectado = IdProyecto
+                    FROM dbo.Proyectos
+                    WHERE Codigo = 'RED_WINET'
+                    AND Activo = 1;
+                END;
+
                 INSERT INTO dbo.OrdenesTrabajo
                 (
                     IdOperacion,
                     CodigoOT,
                     CodigoServicio,
+                    CodigoPuntoVenta,
+                    IdProyecto,
                     ProductoPlan,
                     TipoServicio,
                     Cliente,
@@ -578,6 +614,8 @@ async function insertarOrden(
                     @IdOperacion,
                     @CodigoOT,
                     @CodigoServicio,
+                    @CodigoPuntoVenta,
+                    @IdProyectoDetectado,
                     @ProductoPlan,
                     @TipoServicio,
                     @Cliente,
@@ -649,6 +687,91 @@ async function vincularAsignacionActividad(
 }
 
 /**
+ * Resuelve cómo debe cerrarse una asignación activa
+ * cuando OFSC informa un estado terminal o una
+ * reprogramación.
+ */
+function resolverCierreAsignacionDesdeEstado(
+    estadoOT
+) {
+    if (estadoOT === "REPROGRAMADA") {
+        return {
+            nuevoEstado: "CANCELADA",
+            evento: "CANCELACION",
+            observacion:
+                "Asignación cerrada por reprogramación recibida desde OFSC."
+        };
+    }
+
+    if (estadoOT === "FINALIZADA") {
+        return {
+            nuevoEstado: "FINALIZADA",
+            evento: "FINALIZACION",
+            observacion:
+                "Asignación finalizada según el estado recibido desde OFSC."
+        };
+    }
+
+    if (estadoOT === "CANCELADA") {
+        return {
+            nuevoEstado: "CANCELADA",
+            evento: "CANCELACION",
+            observacion:
+                "Asignación cancelada según el estado recibido desde OFSC."
+        };
+    }
+
+    return null;
+}
+
+/**
+ * Normaliza una fila rechazada para mostrarla en la
+ * respuesta y conservarla en DetalleImportacionOFSC.
+ */
+function normalizarFilaRechazada(rechazo = {}) {
+    const filaRecibida = Number(
+        rechazo.fila
+    );
+
+    const fila =
+        Number.isInteger(filaRecibida) &&
+        filaRecibida > 0
+            ? filaRecibida
+            : null;
+
+    const codigoOT = limpiarTexto(
+        rechazo.codigoOT
+    );
+
+    const idActividadOFSC = limpiarTexto(
+        rechazo.idActividadOFSC
+    );
+
+    const motivo =
+        limpiarTexto(rechazo.motivo) ||
+        "La fila no cumple las validaciones del importador.";
+
+    const mensaje = [
+        fila
+            ? `Fila Excel ${fila}.`
+            : "Fila Excel sin número disponible.",
+        `OT: ${codigoOT || "(vacía)"}.`,
+        `ID actividad OFSC: ${idActividadOFSC || "(vacío)"}.`,
+        `Motivo: ${motivo}`
+    ]
+        .join(" ")
+        .slice(0, 500);
+
+    return {
+        fila,
+        codigoOT,
+        idActividadOFSC,
+        motivo,
+        mensaje
+    };
+}
+
+/**
  * Actualiza la asignación activa de acuerdo
  * con el estado general de la OT.
  */
@@ -656,7 +779,8 @@ async function actualizarAsignacionActiva(
     transaction,
     idAsignacion,
     idActividad,
-    estadoOT
+    estadoOT,
+    idUsuario
 ) {
     if (!idAsignacion) {
         return;
@@ -668,42 +792,27 @@ async function actualizarAsignacionActiva(
         idActividad
     );
 
-    let nuevoEstado = null;
-    let observacion = null;
-
-    if (estadoOT === "REPROGRAMADA") {
-        nuevoEstado =
-            "CANCELADA";
-
-        observacion =
-            "Asignación cerrada por reprogramación recibida desde OFSC.";
-    }
-
-    if (estadoOT === "FINALIZADA") {
-        nuevoEstado =
-            "FINALIZADA";
-
-        observacion =
-            "Asignación finalizada según el estado recibido desde OFSC.";
-    }
-
-    if (estadoOT === "CANCELADA") {
-        nuevoEstado =
-            "CANCELADA";
-
-        observacion =
-            "Asignación cancelada según el estado recibido desde OFSC.";
-    }
+    const cierre =
+        resolverCierreAsignacionDesdeEstado(
+            estadoOT
+        );
 
     /*
      * INICIADA, SUSPENDIDA y NO_REALIZADO
      * conservan la asignación ACTIVA.
      */
-    if (!nuevoEstado) {
+    if (!cierre) {
         return;
     }
 
-    await new sql.Request(transaction)
+    const {
+        nuevoEstado,
+        evento,
+        observacion
+    } = cierre;
+
+    const resultadoActualizacion =
+        await new sql.Request(transaction)
 
         .input(
             "IdAsignacion",
@@ -742,12 +851,21 @@ async function actualizarAsignacionActiva(
                             @Observacion
 
                         ELSE
-                            CONCAT(
-                                Observaciones,
-                                ' | ',
-                                @Observacion
+                            LEFT(
+                                CONCAT(
+                                    Observaciones,
+                                    ' | ',
+                                    @Observacion
+                                ),
+                                500
                             )
                     END
+
+            OUTPUT
+                DELETED.IdOrden,
+                DELETED.IdTecnico,
+                DELETED.Estado
+                    AS EstadoAnterior
 
             WHERE
                 IdAsignacion =
@@ -755,6 +873,42 @@ async function actualizarAsignacionActiva(
                 AND Estado =
                     'ACTIVA';
         `);
+
+    if (
+        resultadoActualizacion
+            .recordset?.length !== 1
+    ) {
+        return;
+    }
+
+    const asignacionAnterior =
+        resultadoActualizacion.recordset[0];
+
+    await registrarHistorialAsignacion(
+        transaction,
+        {
+            idAsignacion,
+            idOrden:
+                asignacionAnterior.IdOrden,
+            idTecnicoAnterior:
+                asignacionAnterior.IdTecnico,
+            idTecnicoNuevo:
+                nuevoEstado === "FINALIZADA"
+                    ? asignacionAnterior.IdTecnico
+                    : null,
+            evento,
+            estadoAnterior:
+                asignacionAnterior.EstadoAnterior,
+            estadoNuevo:
+                nuevoEstado,
+            motivo:
+                observacion,
+            fuente:
+                "OFSC",
+            idUsuario,
+            idActividad
+        }
+    );
 }
 
 /**
@@ -885,7 +1039,8 @@ async function actualizarOrden(
     transaction,
     ordenExistente,
     actividad,
-    estadoOT
+    estadoOT,
+    cambiosDetectados = []
 ) {
     const datosFinales = {
         codigoServicio:
@@ -894,6 +1049,14 @@ async function actualizarOrden(
                     actividad.codigoServicio
                 ),
                 ordenExistente.CodigoServicio
+            ),
+
+        codigoPuntoVenta:
+            conservarValor(
+                limpiarTexto(
+                    actividad.codigoPuntoVenta
+                ),
+                ordenExistente.CodigoPuntoVenta
             ),
 
         productoPlan:
@@ -1005,70 +1168,149 @@ async function actualizarOrden(
             tieneAsignacionActiva
         );
 
+    /*
+     * Los cambios se calculan contra los valores
+     * finales que realmente serán guardados.
+     */
+    const candidatosCambio = [
+        {
+            campo: "CodigoServicio",
+            valorAnterior: ordenExistente.CodigoServicio,
+            valorNuevo: datosFinales.codigoServicio,
+            comparar: textosIguales
+        },
+        {
+            campo: "CodigoPuntoVenta",
+            valorAnterior: ordenExistente.CodigoPuntoVenta,
+            valorNuevo: datosFinales.codigoPuntoVenta,
+            comparar: textosIguales
+        },
+        {
+            campo: "ProductoPlan",
+            valorAnterior: ordenExistente.ProductoPlan,
+            valorNuevo: datosFinales.productoPlan,
+            comparar: textosIguales
+        },
+        {
+            campo: "TipoServicio",
+            valorAnterior: ordenExistente.TipoServicio,
+            valorNuevo: datosFinales.tipoServicio,
+            comparar: textosIguales
+        },
+        {
+            campo: "Cliente",
+            valorAnterior: ordenExistente.Cliente,
+            valorNuevo: datosFinales.cliente,
+            comparar: textosIguales
+        },
+        {
+            campo: "DNI",
+            valorAnterior: ordenExistente.DNI,
+            valorNuevo: datosFinales.dni,
+            comparar: textosIguales
+        },
+        {
+            campo: "Telefono",
+            valorAnterior: ordenExistente.Telefono,
+            valorNuevo: datosFinales.telefono,
+            comparar: textosIguales
+        },
+        {
+            campo: "Direccion",
+            valorAnterior: ordenExistente.Direccion,
+            valorNuevo: datosFinales.direccion,
+            comparar: textosIguales
+        },
+        {
+            campo: "Distrito",
+            valorAnterior: ordenExistente.Distrito,
+            valorNuevo: datosFinales.distrito,
+            comparar: textosIguales
+        },
+        {
+            campo: "LatitudCliente",
+            valorAnterior: ordenExistente.LatitudCliente,
+            valorNuevo: datosFinales.latitudCliente,
+            comparar: numerosIguales
+        },
+        {
+            campo: "LongitudCliente",
+            valorAnterior: ordenExistente.LongitudCliente,
+            valorNuevo: datosFinales.longitudCliente,
+            comparar: numerosIguales
+        },
+        {
+            campo: "RFS",
+            valorAnterior: ordenExistente.RFS,
+            valorNuevo: datosFinales.rfs,
+            comparar: textosIguales
+        },
+        {
+            campo: "FechaAgenda",
+            valorAnterior:
+                fechaComparable(
+                    ordenExistente.FechaAgenda
+                ),
+            valorNuevo:
+                fechaComparable(
+                    datosFinales.fechaAgenda
+                ),
+            comparar: textosIguales
+        },
+        {
+            campo: "Horario",
+            valorAnterior: ordenExistente.Horario,
+            valorNuevo: datosFinales.horario,
+            comparar: textosIguales
+        },
+        {
+            campo: "EstadoOT",
+            valorAnterior:
+                normalizarEstadoOT(
+                    ordenExistente.EstadoOT
+                ),
+            valorNuevo:
+                normalizarEstadoOT(
+                    estadoOT
+                ),
+            comparar: textosIguales
+        },
+        {
+            campo: "EstadoAsignacion",
+            valorAnterior:
+                normalizarTexto(
+                    ordenExistente.EstadoAsignacion
+                ),
+            valorNuevo:
+                normalizarTexto(
+                    estadoAsignacion
+                ),
+            comparar: textosIguales
+        }
+    ];
+
+    const cambios =
+        candidatosCambio
+            .filter((cambio) =>
+                !cambio.comparar(
+                    cambio.valorAnterior,
+                    cambio.valorNuevo
+                )
+            )
+            .map((cambio) => ({
+                campo: cambio.campo,
+                valorAnterior:
+                    cambio.valorAnterior,
+                valorNuevo:
+                    cambio.valorNuevo
+            }));
+
+    cambiosDetectados.push(
+        ...cambios
+    );
+
     const hayCambiosDatos =
-        !textosIguales(
-            ordenExistente.CodigoServicio,
-            datosFinales.codigoServicio
-        ) ||
-        !textosIguales(
-            ordenExistente.ProductoPlan,
-            datosFinales.productoPlan
-        ) ||
-        !textosIguales(
-            ordenExistente.TipoServicio,
-            datosFinales.tipoServicio
-        ) ||
-        !textosIguales(
-            ordenExistente.Cliente,
-            datosFinales.cliente
-        ) ||
-        !textosIguales(
-            ordenExistente.DNI,
-            datosFinales.dni
-        ) ||
-        !textosIguales(
-            ordenExistente.Telefono,
-            datosFinales.telefono
-        ) ||
-        !textosIguales(
-            ordenExistente.Direccion,
-            datosFinales.direccion
-        ) ||
-        !textosIguales(
-            ordenExistente.Distrito,
-            datosFinales.distrito
-        ) ||
-        !numerosIguales(
-            ordenExistente.LatitudCliente,
-            datosFinales.latitudCliente
-        ) ||
-        !numerosIguales(
-            ordenExistente.LongitudCliente,
-            datosFinales.longitudCliente
-        ) ||
-        !textosIguales(
-            ordenExistente.RFS,
-            datosFinales.rfs
-        ) ||
-        fechaComparable(
-            ordenExistente.FechaAgenda
-        ) !==
-            fechaComparable(
-                datosFinales.fechaAgenda
-            ) ||
-        !textosIguales(
-            ordenExistente.Horario,
-            datosFinales.horario
-        ) ||
-        normalizarEstadoOT(
-            ordenExistente.EstadoOT
-        ) !== estadoOT ||
-        normalizarTexto(
-            ordenExistente.EstadoAsignacion
-        ) !==
-            normalizarTexto(
-                estadoAsignacion
-            );
+        cambios.length > 0;
 
     if (!hayCambiosDatos) {
         return false;
@@ -1086,6 +1328,11 @@ async function actualizarOrden(
             "CodigoServicio",
             sql.VarChar(30),
             datosFinales.codigoServicio
+        )
+        .input(
+            "CodigoPuntoVenta",
+            sql.VarChar(20),
+            datosFinales.codigoPuntoVenta
         )
 
         .input(
@@ -1156,7 +1403,7 @@ async function actualizarOrden(
 
         .input(
             "Horario",
-            sql.VarChar(20),
+            sql.VarChar(50),
             datosFinales.horario
         )
 
@@ -1177,6 +1424,23 @@ async function actualizarOrden(
             SET
                 CodigoServicio =
                     @CodigoServicio,
+                CodigoPuntoVenta =
+                    @CodigoPuntoVenta,
+
+                IdProyecto =
+                (
+                    SELECT TOP 1
+                        P.IdProyecto
+                    FROM dbo.Proyectos P
+                    WHERE
+                        P.Codigo =
+                            CASE
+                                WHEN NULLIF(LTRIM(RTRIM(@RFS)), '') IS NOT NULL
+                                    THEN 'RED_ENTEL'
+                                ELSE 'RED_WINET'
+                            END
+                        AND P.Activo = 1
+                ),
 
                 ProductoPlan =
                     @ProductoPlan,
@@ -1240,7 +1504,8 @@ async function guardarOrdenes(
     transaction,
     actividades,
     idOperacion,
-    idUsuario
+    idUsuario,
+    opciones = {}
 ) {
     if (!transaction) {
         throw new Error(
@@ -1276,16 +1541,80 @@ async function guardarOrdenes(
         );
     }
 
+    const filasRechazadasLectura =
+        Array.isArray(
+            opciones.filasRechazadas
+        )
+            ? opciones.filasRechazadas
+            : [];
+
+    const totalFilasRecibido = Number(
+        opciones.totalFilasLeidas
+    );
+
+    const totalFilasLeidas =
+        Number.isInteger(totalFilasRecibido) &&
+        totalFilasRecibido >=
+            actividades.length +
+            filasRechazadasLectura.length
+            ? totalFilasRecibido
+            : actividades.length +
+                filasRechazadasLectura.length;
+
     let insertadas = 0;
     let actualizadas = 0;
     let sinCambios = 0;
     let rechazadas = 0;
+
+    const resultadosPorOT = new Map();
 
     let actividadesInsertadas = 0;
     let actividadesActualizadas = 0;
     let actividadesSinCambios = 0;
 
     const detalleRechazadas = [];
+
+    async function registrarFilaRechazada(
+        rechazoRecibido
+    ) {
+        const rechazo =
+            normalizarFilaRechazada(
+                rechazoRecibido
+            );
+
+        rechazadas++;
+
+        detalleRechazadas.push({
+            fila: rechazo.fila,
+            codigoOT: rechazo.codigoOT,
+            idActividadOFSC:
+                rechazo.idActividadOFSC,
+            motivo: rechazo.motivo
+        });
+
+        await registrarDetalleImportacion(
+            transaction,
+            {
+                idOperacion,
+                idOrden: null,
+                codigoOT:
+                    rechazo.codigoOT
+                        ?.slice(0, 30) ||
+                    null,
+                resultado: "ERROR",
+                mensaje: rechazo.mensaje
+            }
+        );
+    }
+
+    for (
+        const rechazoLectura of
+        filasRechazadasLectura
+    ) {
+        await registrarFilaRechazada(
+            rechazoLectura
+        );
+    }
 
     for (
         let indice = 0;
@@ -1296,7 +1625,11 @@ async function guardarOrdenes(
             actividades[indice];
 
         const numeroFilaExcel =
-            indice + 2;
+            Number.isInteger(
+                actividad.numeroFilaExcel
+            )
+                ? actividad.numeroFilaExcel
+                : indice + 2;
 
         const codigoOT =
             limpiarTexto(
@@ -1309,12 +1642,10 @@ async function guardarOrdenes(
             );
 
         if (!codigoOT) {
-            rechazadas++;
-
-            detalleRechazadas.push({
-                fila:
-                    numeroFilaExcel,
-
+            await registrarFilaRechazada({
+                fila: numeroFilaExcel,
+                codigoOT: null,
+                idActividadOFSC,
                 motivo:
                     "La fila no contiene Código OT."
             });
@@ -1323,14 +1654,10 @@ async function guardarOrdenes(
         }
 
         if (!idActividadOFSC) {
-            rechazadas++;
-
-            detalleRechazadas.push({
-                fila:
-                    numeroFilaExcel,
-
+            await registrarFilaRechazada({
+                fila: numeroFilaExcel,
                 codigoOT,
-
+                idActividadOFSC: null,
                 motivo:
                     "La fila no contiene ID de actividad OFSC."
             });
@@ -1370,6 +1697,10 @@ async function guardarOrdenes(
                         idOperacion
                     );
 
+                /*
+                * Registrar el primer estado
+                * de la nueva OT.
+                */
                 await registrarHistorialOT(
                     transaction,
                     idOrden,
@@ -1385,7 +1716,51 @@ async function guardarOrdenes(
                     idUsuario
                 );
 
-                insertadas++;
+                /*
+                * SIGOT V2:
+                * Solo las OTs nuevas que todavía pueden
+                * programarse generan un TSS inicial.
+                */
+                const estadoInicialOT =
+                    normalizarEstadoOT(
+                        estadoDesdeActividad
+                    );
+
+                const debeCrearTSS =
+                    requiereTSSInicial(
+                        estadoInicialOT
+                    );
+
+                if (debeCrearTSS) {
+                    await crearTSSInicial(
+                        transaction,
+                        idOrden,
+                        idUsuario
+                    );
+                }
+
+                /*
+                * Registrar el resultado de esta fila
+                * dentro de la importación.
+                */
+                await registrarDetalleImportacion(
+                    transaction,
+                    {
+                        idOperacion,
+                        idOrden,
+                        codigoOT,
+                        resultado: "NUEVA",
+                        mensaje:
+                            debeCrearTSS
+                                ? "OT nueva registrada. Se evaluó la creación de TSS según el proyecto."
+                                : `OT nueva registrada sin TSS porque su estado inicial es ${estadoInicialOT}.`
+                    }
+                );
+
+                resultadosPorOT.set(
+                    codigoOT,
+                    "NUEVA"
+                );
 
                 if (
                     resultadoActividad
@@ -1445,12 +1820,15 @@ async function guardarOrdenes(
                 estadoAnterior !==
                 estadoFinal;
 
+            const cambiosOrden = [];
+
             const ordenActualizada =
                 await actualizarOrden(
                     transaction,
                     ordenExistente,
                     actividad,
-                    estadoFinal
+                    estadoFinal,
+                    cambiosOrden
                 );
 
             /*
@@ -1479,7 +1857,8 @@ async function guardarOrdenes(
                     .IdAsignacionActiva,
                 resultadoActividad
                     .idActividad,
-                estadoFinal
+                estadoFinal,
+                idUsuario
             );
 
             /*
@@ -1508,10 +1887,86 @@ async function guardarOrdenes(
                 resultadoActividad.actualizada ||
                 cambioEstado;
 
+            const cambiosImportacion = [
+                ...cambiosOrden,
+                ...(
+                    resultadoActividad
+                        .cambios || []
+                )
+            ];
+
             if (huboCambio) {
-                actualizadas++;
-            } else {
-                sinCambios++;
+                /*
+                 * Registrar los campos generales y
+                 * de actividad que realmente cambiaron.
+                 */
+                if (
+                    cambiosImportacion
+                        .length > 0
+                ) {
+                    await registrarCambiosOFSC(
+                        transaction,
+                        ordenExistente.IdOrden,
+                        idOperacion,
+                        cambiosImportacion
+                    );
+                }
+
+                await registrarDetalleImportacion(
+                    transaction,
+                    {
+                        idOperacion,
+                        idOrden:
+                            ordenExistente.IdOrden,
+                        codigoOT,
+                        resultado:
+                            "ACTUALIZADA",
+                        mensaje:
+                            cambiosImportacion
+                                .length > 0
+                                ? `OT actualizada. ${cambiosImportacion.length} cambio(s) OFSC registrado(s).`
+                                : "OT actualizada por cambios en su actividad OFSC."
+                    }
+                );
+
+                                const resultadoPrevio =
+                                    resultadosPorOT.get(
+                                        codigoOT
+                                    );
+
+                                if (
+                                    resultadoPrevio !== "NUEVA"
+                                ) {
+                                    resultadosPorOT.set(
+                                        codigoOT,
+                                        "ACTUALIZADA"
+                                    );
+                                }
+                            } else {
+                                await registrarDetalleImportacion(
+                                    transaction,
+                                    {
+                                        idOperacion,
+                                        idOrden:
+                                            ordenExistente.IdOrden,
+                                        codigoOT,
+                                        resultado:
+                                            "SIN_CAMBIOS",
+                                        mensaje:
+                                            "La OT y su actividad OFSC no presentan cambios."
+                                    }
+                                );
+
+                                if (
+                                    !resultadosPorOT.has(
+                                        codigoOT
+                                    )
+                                ) {
+                                    resultadosPorOT.set(
+                                        codigoOT,
+                                        "SIN_CAMBIOS"
+                                    );
+                                }
             }
         } catch (error) {
             throw new Error(
@@ -1522,9 +1977,26 @@ async function guardarOrdenes(
         }
     }
 
+        for (
+            const resultado of
+            resultadosPorOT.values()
+        ) {
+            if (resultado === "NUEVA") {
+                insertadas++;
+            }
+
+            if (resultado === "ACTUALIZADA") {
+                actualizadas++;
+            }
+
+            if (resultado === "SIN_CAMBIOS") {
+                sinCambios++;
+            }
+        }
+
     return {
         totalLeidas:
-            actividades.length,
+            totalFilasLeidas,
 
         insertadas,
         actualizadas,
@@ -1554,5 +2026,7 @@ async function guardarOrdenes(
 }
 
 module.exports = {
-    guardarOrdenes
+    guardarOrdenes,
+    resolverCierreAsignacionDesdeEstado,
+    normalizarFilaRechazada
 };

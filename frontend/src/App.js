@@ -20,7 +20,8 @@ import ReportesPage from "./pages/ReportesPage";
 import Mapa from "./pages/Mapa";
 import UsuariosPage from "./pages/UsuariosPage";
 import AuditoriaPage from "./pages/AuditoriaPage";
-
+import TSSPage from "./pages/TSSPage";
+import ControlOperativoPage from "./pages/ControlOperativoPage";
 function App() {
     return (
         <BrowserRouter>
@@ -56,7 +57,32 @@ function App() {
 
                         <Route
                             path="ordenes"
-                            element={<OrdenesPage />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <OrdenesPage />
+                                </RutaPorRol>
+                            }
+                        />
+
+                        <Route
+                            path="tss"
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <TSSPage />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route
@@ -104,6 +130,23 @@ function App() {
                         />
 
                         <Route
+                            path="control-operativo"
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor",
+                                        "Consulta",
+                                        "Jefe"
+                                    ]}
+                                >
+                                    <ControlOperativoPage />
+                                </RutaPorRol>
+                            }
+                        />
+
+                        <Route
                             path="mapa"
                             element={
                                 <RutaPorRol
@@ -120,7 +163,17 @@ function App() {
 
                         <Route
                             path="reportes"
-                            element={<ReportesPage />}
+                            element={
+                                <RutaPorRol
+                                    rolesPermitidos={[
+                                        "Administrador",
+                                        "Coordinador",
+                                        "Supervisor"
+                                    ]}
+                                >
+                                    <ReportesPage />
+                                </RutaPorRol>
+                            }
                         />
 
                         <Route

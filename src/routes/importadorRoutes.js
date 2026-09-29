@@ -2,8 +2,8 @@
 
 const router = express.Router();
 
-const upload = require(
-    "../middlewares/uploadExcel"
+const uploadImportador = require(
+    "../middlewares/uploadImportador"
 );
 
 const {
@@ -35,7 +35,10 @@ router.post(
         "Administrador",
         "Coordinador"
     ),
-    upload.single("archivo"),
+    uploadImportador.fields([
+        { name: "archivo", maxCount: 1 },
+        { name: "historialRecursos", maxCount: 20 }
+    ]),
     importarOFSC
 );
 

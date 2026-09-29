@@ -63,3 +63,31 @@ export const actualizarEstadoTecnico = async (
 
     return respuesta.data;
 };
+
+// ===============================
+// OBTENER DISPONIBILIDAD DEL TÉCNICO
+// ===============================
+export const obtenerDisponibilidadTecnico = async (
+    id
+) => {
+    const respuesta = await api.get(
+        `/tecnicos/${id}/disponibilidad`
+    );
+
+    return respuesta.data;
+};
+
+// ===============================
+// GUARDAR / ACTUALIZAR DISPONIBILIDAD
+// ===============================
+export const guardarDisponibilidadTecnico = async (
+    id,
+    datos
+) => {
+    const respuesta = await api.put(
+        `/tecnicos/${id}/disponibilidad`,
+        datos
+    );
+
+    return respuesta.data;
+};

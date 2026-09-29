@@ -45,6 +45,97 @@ async function listarOrdenes(
 
         const resultado =
             await pool.request().query(`
+
+                WITH UltimaActividad AS
+                (
+                    SELECT
+                        AOFSC.IdActividad,
+                        AOFSC.IdOrden,
+                        AOFSC.IdActividadOFSC,
+                        AOFSC.EstadoActividad,
+                        AOFSC.FechaActividad,
+                        AOFSC.HoraInicio,
+                        AOFSC.HoraFin,
+                        AOFSC.FlagReagenda,
+                        AOFSC.RazonReagenda,
+                        AOFSC.ResultadoNoRealizado,
+                        AOFSC.Motivo,
+                        AOFSC.MotivoCancelacion,
+                        AOFSC.TipoCierre,
+                        AOFSC.ResultadoGlobal,
+                        AOFSC.ResponsableSuspension,
+                        AOFSC.TipoSuspension,
+                        AOFSC.FechaImportacion,
+                        AOFSC.FechaActualizacion,
+
+                        ROW_NUMBER() OVER
+                        (
+                            PARTITION BY
+                                AOFSC.IdOrden
+
+                            ORDER BY
+                                COALESCE(
+                                    AOFSC.FechaActualizacion,
+                                    AOFSC.FechaImportacion
+                                ) DESC,
+
+                                AOFSC.IdActividad DESC
+                        ) AS RN
+
+                    FROM dbo.ActividadesOFSC AOFSC
+                ),
+
+                AsignacionActiva AS
+                (
+                    SELECT
+                        A2.IdAsignacion,
+                        A2.IdOrden,
+                        A2.IdTecnico,
+                        A2.TipoAsignacion,
+                        A2.Estado,
+                        A2.FechaAsignacion,
+                        A2.Observaciones,
+
+                        ROW_NUMBER() OVER
+                        (
+                            PARTITION BY
+                                A2.IdOrden
+
+                            ORDER BY
+                                A2.FechaAsignacion DESC,
+                                A2.IdAsignacion DESC
+                        ) AS RN
+
+                    FROM dbo.Asignaciones A2
+
+                    WHERE
+                        A2.Estado = 'ACTIVA'
+                ),
+
+                UltimaAsignacion AS
+                (
+                    SELECT
+                        AH.IdAsignacion,
+                        AH.IdOrden,
+                        AH.IdTecnico,
+                        AH.TipoAsignacion,
+                        AH.Estado,
+                        AH.FechaAsignacion,
+                        AH.Observaciones,
+
+                        ROW_NUMBER() OVER
+                        (
+                            PARTITION BY
+                                AH.IdOrden
+
+                            ORDER BY
+                                AH.FechaAsignacion DESC,
+                                AH.IdAsignacion DESC
+                        ) AS RN
+
+                    FROM dbo.Asignaciones AH
+                )
+
                 SELECT
                     OT.IdOrden,
                     OT.IdOperacion,
@@ -65,6 +156,12 @@ async function listarOrdenes(
                     OT.Horario,
                     OT.EstadoOT,
                     OT.EstadoAsignacion,
+
+                    OT.IdProyecto,
+
+                    P.Codigo AS ProyectoCodigo,
+                    P.Nombre AS ProyectoNombre,
+
                     OT.FechaImportacion,
                     OT.FechaActualizacion,
 
@@ -124,9 +221,6 @@ async function listarOrdenes(
                     T.DistritoBase
                         AS DistritoTecnico,
 
-                    /*
-                    * Última asignación histórica.
-                    */
                     ULT.IdAsignacion
                         AS IdUltimaAsignacion,
 
@@ -153,93 +247,40 @@ async function listarOrdenes(
 
                 FROM dbo.OrdenesTrabajo OT
 
+                LEFT JOIN dbo.Proyectos P
+                    ON P.IdProyecto =
+                        OT.IdProyecto
+
                 LEFT JOIN dbo.Operaciones O
                     ON O.IdOperacion =
                         OT.IdOperacion
 
-                OUTER APPLY
-                (
-                    SELECT TOP (1)
-                        AOFSC.IdActividad,
-                        AOFSC.IdActividadOFSC,
-                        AOFSC.EstadoActividad,
-                        AOFSC.FechaActividad,
-                        AOFSC.HoraInicio,
-                        AOFSC.HoraFin,
-                        AOFSC.FlagReagenda,
-                        AOFSC.RazonReagenda,
-                        AOFSC.ResultadoNoRealizado,
-                        AOFSC.Motivo,
-                        AOFSC.MotivoCancelacion,
-                        AOFSC.TipoCierre,
-                        AOFSC.ResultadoGlobal,
-                        AOFSC.ResponsableSuspension,
-                        AOFSC.TipoSuspension,
-                        AOFSC.FechaImportacion,
-                        AOFSC.FechaActualizacion
+                LEFT JOIN UltimaActividad ACT
+                    ON ACT.IdOrden =
+                        OT.IdOrden
 
-                    FROM dbo.ActividadesOFSC AOFSC
+                    AND ACT.RN = 1
 
-                    WHERE
-                        AOFSC.IdOrden =
-                            OT.IdOrden
+                LEFT JOIN AsignacionActiva A
+                    ON A.IdOrden =
+                        OT.IdOrden
 
-                    ORDER BY
-                        COALESCE(
-                            AOFSC.FechaActualizacion,
-                            AOFSC.FechaImportacion
-                        ) DESC,
+                    AND A.RN = 1
 
-                        AOFSC.IdActividad DESC
-                ) ACT
+                LEFT JOIN UltimaAsignacion ULT
+                    ON ULT.IdOrden =
+                        OT.IdOrden
 
-                OUTER APPLY
-                (
-                    SELECT TOP (1)
-                        A2.IdAsignacion,
-                        A2.IdTecnico,
-                        A2.TipoAsignacion,
-                        A2.Estado,
-                        A2.FechaAsignacion,
-                        A2.Observaciones
-
-                    FROM dbo.Asignaciones A2
-
-                    WHERE
-                        A2.IdOrden = OT.IdOrden
-                        AND A2.Estado = 'ACTIVA'
-
-                    ORDER BY
-                        A2.FechaAsignacion DESC,
-                        A2.IdAsignacion DESC
-                ) A
-
-                OUTER APPLY
-                (
-                    SELECT TOP (1)
-                        AH.IdAsignacion,
-                        AH.IdTecnico,
-                        AH.TipoAsignacion,
-                        AH.Estado,
-                        AH.FechaAsignacion,
-                        AH.Observaciones
-
-                    FROM dbo.Asignaciones AH
-
-                    WHERE
-                        AH.IdOrden = OT.IdOrden
-
-                    ORDER BY
-                        AH.FechaAsignacion DESC,
-                        AH.IdAsignacion DESC
-                ) ULT
+                    AND ULT.RN = 1
 
                 LEFT JOIN dbo.Tecnicos T
                     ON T.IdTecnico =
                         A.IdTecnico
+
                 LEFT JOIN dbo.Tecnicos TU
                     ON TU.IdTecnico =
                         ULT.IdTecnico
+
                 ORDER BY
                     OT.IdOrden DESC;
             `);
@@ -256,7 +297,9 @@ async function listarOrdenes(
             .json(
                 resultado.recordset
             );
+
     } catch (error) {
+
         console.error(
             "Error al listar las órdenes:",
             error
@@ -366,7 +409,9 @@ async function actualizarEstadoOrden(
                 cambio:
                     resultado
             });
+
     } catch (error) {
+
         console.error(
             "Error al cambiar estado de OT:",
             error

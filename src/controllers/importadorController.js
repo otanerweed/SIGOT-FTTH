@@ -1,7 +1,7 @@
 const fs = require("fs/promises");
 
 const {
-    leerExcel
+    leerExcelConDetalle
 } = require("../services/excelService");
 
 const {
@@ -13,9 +13,19 @@ const {
 } = require("../services/operacionService");
 
 const {
+    actualizarResumenOperacion
+} = require(
+    "../services/importacionV2Service"
+);
+
+const {
     conectarDB,
     sql
 } = require("../config/database");
+
+const {
+    importarArchivoHistorial
+} = require("../services/historialRecursoService");
 
 /**
  * Importa un archivo Excel de OFSC.
@@ -55,39 +65,163 @@ async function importarOFSC(req, res) {
             `Usuario responsable: ${idUsuarioAutenticado}`
         );
 
-        if (!req.file) {
-            return res.status(400).json({
-                ok: false,
-                mensaje:
-                    "Debe seleccionar un archivo Excel."
-            });
-        }
+        const archivoOFSC =
+            req.files?.archivo?.[0] || null;
 
-        console.log(
-            "Archivo recibido:",
-            req.file.originalname
-        );
-
-        // =====================================
-        // LEER Y TRANSFORMAR EL EXCEL
-        // =====================================
-        const ordenes = leerExcel(
-            req.file.path
-        );
+        const archivosHistorial =
+            req.files?.historialRecursos || [];
 
         if (
-            !Array.isArray(ordenes) ||
-            ordenes.length === 0
+            !archivoOFSC &&
+            archivosHistorial.length === 0
         ) {
             return res.status(400).json({
                 ok: false,
                 mensaje:
-                    "El archivo no contiene órdenes válidas para procesar."
+                    "Debe seleccionar al menos un archivo OFSC o un Historial de Recursos."
+            });
+        }
+
+        if (archivoOFSC) {
+            console.log(
+                "Archivo recibido:",
+                archivoOFSC.originalname
+            );
+        } else {
+            console.log(
+                "Sin archivo Excel OFSC. Se procesarán solo los Resource Log."
+            );
+        }
+        
+        // =====================================
+        // IMPORTACIÓN SOLO DE HISTORIAL DE RECURSOS
+        // =====================================
+        if (
+            !archivoOFSC &&
+            archivosHistorial.length > 0
+        ) {
+            const poolHistorial =
+                await conectarDB();
+
+            transaction =
+                new sql.Transaction(
+                    poolHistorial
+                );
+
+            await transaction.begin(
+                sql.ISOLATION_LEVEL.READ_COMMITTED
+            );
+
+            transactionIniciada = true;
+
+            const resumenHistorialRecursos = [];
+
+            for (
+                const archivoHistorial
+                of archivosHistorial
+            ) {
+                const resultadoHistorial =
+                    await importarArchivoHistorial(
+                        poolHistorial,
+                        transaction,
+                        archivoHistorial.path,
+                        archivoHistorial.originalname,
+                        idUsuarioAutenticado
+                    );
+
+                resumenHistorialRecursos.push(
+                    resultadoHistorial
+                );
+            }
+
+            await transaction.commit();
+
+            transactionIniciada = false;
+
+            let totalEventos = 0;
+            let totalInsertados = 0;
+            let totalDuplicados = 0;
+
+            for (
+                const item
+                of resumenHistorialRecursos
+            ) {
+                totalEventos +=
+                    item.totalEventos || 0;
+
+                totalInsertados +=
+                    item.insertados || 0;
+
+                totalDuplicados +=
+                    item.duplicados || 0;
+            }
+
+            return res.status(200).json({
+                ok: true,
+                mensaje:
+                    "Historial de Recursos OFSC importado correctamente.",
+                resumen: {
+                    totalArchivos:
+                        resumenHistorialRecursos.length,
+                    totalEventos,
+                    insertados:
+                        totalInsertados,
+                    duplicados:
+                        totalDuplicados
+                },
+                historialRecursos:
+                    resumenHistorialRecursos
+            });
+        }
+        // =====================================
+        // LEER Y TRANSFORMAR EL EXCEL
+        // =====================================
+        let lecturaExcel;
+
+        try {
+            lecturaExcel =
+                leerExcelConDetalle(
+                    archivoOFSC.path
+                );
+        } catch (errorLectura) {
+            console.error(
+                "No se pudo interpretar el Excel OFSC:",
+                errorLectura.message
+            );
+
+            return res.status(400).json({
+                ok: false,
+                mensaje:
+                    "No se pudo leer el archivo. Verifique que sea un Excel OFSC válido y que no esté dañado."
+            });
+        }
+
+        const ordenes =
+            lecturaExcel.actividades;
+
+        const filasRechazadas =
+            lecturaExcel.filasRechazadas;
+
+        const totalFilasLeidas =
+            lecturaExcel.totalFilasLeidas;
+
+        if (
+            !Number.isInteger(
+                totalFilasLeidas
+            ) ||
+            totalFilasLeidas === 0
+        ) {
+            return res.status(400).json({
+                ok: false,
+                mensaje:
+                    "El archivo no contiene filas para procesar."
             });
         }
 
         console.log(
-            `Cantidad de órdenes válidas: ${ordenes.length}`
+            `Filas leídas: ${totalFilasLeidas} | ` +
+            `Válidas: ${ordenes.length} | ` +
+            `Rechazadas: ${filasRechazadas.length}`
         );
 
         const pool = await conectarDB();
@@ -96,7 +230,7 @@ async function importarOFSC(req, res) {
             new sql.Transaction(pool);
 
         await transaction.begin(
-            sql.ISOLATION_LEVEL.SERIALIZABLE
+            sql.ISOLATION_LEVEL.READ_COMMITTED
         );
 
         transactionIniciada = true;
@@ -110,7 +244,12 @@ async function importarOFSC(req, res) {
                 .input(
                     "NombreArchivo",
                     sql.VarChar(255),
-                    req.file.originalname
+                    String(
+                        archivoOFSC.originalname ||
+                        "archivo-ofsc"
+                    )
+                        .trim()
+                        .slice(0, 255)
                 )
 
                 .input(
@@ -160,7 +299,11 @@ async function importarOFSC(req, res) {
             transaction,
             ordenes,
             idOperacion,
-            idUsuarioAutenticado
+            idUsuarioAutenticado,
+            {
+                filasRechazadas,
+                totalFilasLeidas
+            }
         );
 
         const cantidadInsertadas =
@@ -174,113 +317,49 @@ async function importarOFSC(req, res) {
             resumen.duplicadas ??
             0;
 
-        const cantidadAplicadas =
-            cantidadInsertadas +
-            cantidadActualizadas;
+        const cantidadRechazadas =
+            resumen.rechazadas ?? 0;
 
-        // =====================================
-        // ARCHIVO SIN CAMBIOS
-        // =====================================
-        if (cantidadAplicadas === 0) {
-            await transaction.rollback();
-
-            transactionIniciada = false;
-
-            return res.status(200).json({
-                ok: true,
-                mensaje:
-                    "El archivo fue revisado, pero no contenía órdenes nuevas ni cambios.",
-                idOperacion: null,
-                resumen
-            });
-        }
-
-        // =====================================
-        // IMPORTACIÓN CON ÓRDENES NUEVAS
-        // =====================================
+        /*
+         * Las órdenes nuevas mantienen la
+         * sincronización operativa existente.
+         */
         if (cantidadInsertadas > 0) {
             await sincronizarOperacion(
                 transaction,
                 idOperacion
             );
+        }
 
-            await new sql.Request(transaction)
+        /*
+         * Cerrar y conservar toda importación,
+         * incluso cuando todas las filas estén
+         * SIN_CAMBIOS.
+         */
+        await actualizarResumenOperacion(
+            transaction,
+            idOperacion,
+            resumen
+        );
 
-                .input(
-                    "IdOperacion",
-                    sql.Int,
-                    idOperacion
-                )
+        // =====================================
+        // IMPORTAR HISTORIALES RESOURCE LOG
+        // =====================================
+        const resumenHistorialRecursos = [];
 
-                .input(
-                    "Observaciones",
-                    sql.VarChar(500),
-                    (
-                        `Importación OFSC. ` +
-                        `Nuevas: ${cantidadInsertadas}. ` +
-                        `Actualizadas: ${cantidadActualizadas}. ` +
-                        `Sin cambios: ${cantidadSinCambios}.`
-                    )
-                )
+        for (const archivoHistorial of archivosHistorial) {
+            const resultadoHistorial =
+                await importarArchivoHistorial(
+                    pool,
+                    transaction,
+                    archivoHistorial.path,
+                    archivoHistorial.originalname,
+                    idUsuarioAutenticado
+                );
 
-                .query(`
-                    UPDATE dbo.Operaciones
-                    SET
-                        Observaciones =
-                            @Observaciones
-                    WHERE
-                        IdOperacion =
-                            @IdOperacion;
-                `);
-        } else {
-            // =====================================
-            // SINCRONIZACIÓN SIN ÓRDENES NUEVAS
-            // =====================================
-            await new sql.Request(transaction)
-
-                .input(
-                    "IdOperacion",
-                    sql.Int,
-                    idOperacion
-                )
-
-                .input(
-                    "CantidadActualizadas",
-                    sql.Int,
-                    cantidadActualizadas
-                )
-
-                .input(
-                    "Observaciones",
-                    sql.VarChar(500),
-                    (
-                        `Sincronización OFSC sin órdenes nuevas. ` +
-                        `Actualizadas: ${cantidadActualizadas}. ` +
-                        `Sin cambios: ${cantidadSinCambios}.`
-                    )
-                )
-
-                .query(`
-                    UPDATE dbo.Operaciones
-                    SET
-                        CantidadOT =
-                            @CantidadActualizadas,
-
-                        CantidadAsignadas = 0,
-
-                        CantidadPendientes = 0,
-
-                        CantidadFinalizadas = 0,
-
-                        Estado = 'CERRADA',
-
-                        Observaciones =
-                            @Observaciones
-
-                    WHERE
-                        IdOperacion =
-                            @IdOperacion;
-                `);
+            resumenHistorialRecursos.push(
+                resultadoHistorial
+            );
         }
 
         await transaction.commit();
@@ -290,6 +369,17 @@ async function importarOFSC(req, res) {
         let mensaje;
 
         if (
+            cantidadRechazadas > 0 &&
+            cantidadInsertadas === 0 &&
+            cantidadActualizadas === 0 &&
+            cantidadSinCambios === 0
+        ) {
+            mensaje =
+                "Archivo revisado. Todas las filas fueron rechazadas; revise el detalle de errores.";
+        } else if (cantidadRechazadas > 0) {
+            mensaje =
+                "Importación realizada con observaciones. Algunas filas fueron rechazadas.";
+        } else if (
             cantidadInsertadas > 0 &&
             cantidadActualizadas > 0
         ) {
@@ -300,9 +390,14 @@ async function importarOFSC(req, res) {
         ) {
             mensaje =
                 "Importación realizada correctamente.";
-        } else {
+        } else if (
+            cantidadActualizadas > 0
+        ) {
             mensaje =
                 "Sincronización realizada. Las órdenes existentes fueron actualizadas.";
+        } else {
+            mensaje =
+                "El archivo fue revisado y no contenía órdenes nuevas ni cambios.";
         }
 
         console.log(
@@ -316,7 +411,8 @@ async function importarOFSC(req, res) {
         console.log(
             `Nuevas: ${cantidadInsertadas} | ` +
             `Actualizadas: ${cantidadActualizadas} | ` +
-            `Sin cambios: ${cantidadSinCambios}`
+            `Sin cambios: ${cantidadSinCambios} | ` +
+            `Rechazadas: ${cantidadRechazadas}`
         );
 
         return res
@@ -329,7 +425,8 @@ async function importarOFSC(req, res) {
                 ok: true,
                 mensaje,
                 idOperacion,
-                resumen
+                resumen,
+                historialRecursos: resumenHistorialRecursos
             });
     } catch (error) {
         if (
@@ -355,26 +452,48 @@ async function importarOFSC(req, res) {
         return res.status(500).json({
             ok: false,
             mensaje:
-                "No se pudo realizar la importación.",
-            detalle: error.message
+                "No se pudo realizar la importación. No se guardó ningún cambio."
         });
     } finally {
         // =====================================
         // ELIMINAR ARCHIVO TEMPORAL
         // =====================================
-        if (req.file?.path) {
+        const archivosTemporales =
+            Object.values(
+                req.files || {}
+            ).flat();
+
+        for (
+            const archivoTemporal
+            of archivosTemporales
+        ) {
+            if (!archivoTemporal?.path) {
+                continue;
+            }
+
             try {
                 await fs.unlink(
-                    req.file.path
+                    archivoTemporal.path
                 );
-            } catch (errorArchivo) {
+
+                console.log(
+                    "✅ Archivo temporal eliminado:",
+                    archivoTemporal.path
+                );
+                        } catch (errorArchivo) {
+                console.error(
+                    "❌ No se pudo eliminar archivo temporal:",
+                    archivoTemporal.path,
+                    errorArchivo.message
+                );
+
                 if (
                     errorArchivo.code !==
                     "ENOENT"
                 ) {
                     console.error(
-                        "No se pudo eliminar el archivo temporal:",
-                        errorArchivo.message
+                        "Código de error:",
+                        errorArchivo.code
                     );
                 }
             }
@@ -408,6 +527,27 @@ async function obtenerHistorialImportaciones(
                     O.CantidadAsignadas,
                     O.CantidadPendientes,
                     O.CantidadFinalizadas,
+                    O.CantidadNuevas,
+                    O.CantidadActualizadas,
+                    O.CantidadSinCambios,
+                    O.CantidadErrores,
+
+                    CAST(
+                        CASE
+                            WHEN EXISTS (
+                                SELECT 1
+                                FROM dbo.DetalleImportacionOFSC D
+                                WHERE D.IdOperacion = O.IdOperacion
+                            )
+                            OR LTRIM(
+                                ISNULL(O.Observaciones, '')
+                            ) LIKE N'Importación OFSC V2.%'
+                            THEN 1
+                            ELSE 0
+                        END
+                        AS BIT
+                    ) AS EsImportacionV2,
+
                     O.IdUsuario,
                     O.FechaImportacion,
                     O.Estado,

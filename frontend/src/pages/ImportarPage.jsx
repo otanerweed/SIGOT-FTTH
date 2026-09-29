@@ -18,6 +18,11 @@ function ImportarPage() {
     const [archivo, setArchivo] =
         useState(null);
 
+    const [
+        archivosHistorialRecursos,
+        setArchivosHistorialRecursos
+    ] = useState([]);
+
     const [resultado, setResultado] =
         useState(null);
 
@@ -60,6 +65,29 @@ function ImportarPage() {
     function mostrarEstado(valor) {
         return obtenerTexto(valor)
             .replaceAll("_", " ");
+    }
+
+    function esImportacionV2(operacion) {
+        const indicador =
+            operacion?.EsImportacionV2;
+
+        if (
+            indicador !== null &&
+            indicador !== undefined
+        ) {
+            return (
+                indicador === true ||
+                Number(indicador) === 1
+            );
+        }
+
+        return obtenerTexto(
+            operacion?.Observaciones
+        )
+            .toUpperCase()
+            .startsWith(
+                "IMPORTACIÓN OFSC V2."
+            );
     }
 
     function formatearFechaHora(valor) {
@@ -157,34 +185,57 @@ function ImportarPage() {
         setMensajeError("");
     };
 
+    const seleccionarHistorialRecursos = (
+        evento
+    ) => {
+        const archivosSeleccionados =
+            Array.from(
+                evento.target.files || []
+            );
+
+        setArchivosHistorialRecursos(
+            archivosSeleccionados
+        );
+
+        setResultado(null);
+        setMensajeError("");
+    };
+
     // =====================================
-    // IMPORTAR EXCEL
+    // IMPORTAR EXCEL / HISTORIAL
     // =====================================
     const importarExcel = async () => {
-        if (!archivo) {
+        if (
+            !archivo &&
+            archivosHistorialRecursos.length === 0
+        ) {
             setMensajeError(
-                "Debe seleccionar un archivo Excel."
+                "Debe seleccionar al menos un archivo OFSC o un Historial de Recursos."
             );
 
             return;
         }
 
-        const extension = archivo.name
-            .split(".")
-            .pop()
-            .toLowerCase();
+        // Validar el Excel principal solo
+        // cuando realmente fue seleccionado.
+        if (archivo) {
+            const extension = archivo.name
+                .split(".")
+                .pop()
+                .toLowerCase();
 
-        if (
-            ![
-                "xlsx",
-                "xls"
-            ].includes(extension)
-        ) {
-            setMensajeError(
-                "El archivo seleccionado no es válido. Use un archivo .xlsx o .xls."
-            );
+            if (
+                ![
+                    "xlsx",
+                    "xls"
+                ].includes(extension)
+            ) {
+                setMensajeError(
+                    "El archivo seleccionado no es válido. Use un archivo .xlsx o .xls."
+                );
 
-            return;
+                return;
+            }
         }
 
         try {
@@ -195,9 +246,24 @@ function ImportarPage() {
             const formData =
                 new FormData();
 
-            formData.append(
-                "archivo",
-                archivo
+            // Solo agregar archivo OFSC
+            // cuando existe.
+            if (archivo) {
+                formData.append(
+                    "archivo",
+                    archivo
+                );
+            }
+
+            // Agregar todos los Resource Log
+            // seleccionados.
+            archivosHistorialRecursos.forEach(
+                (archivoHistorial) => {
+                    formData.append(
+                        "historialRecursos",
+                        archivoHistorial
+                    );
+                }
             );
 
             const respuesta =
@@ -210,12 +276,28 @@ function ImportarPage() {
                 respuesta.data
             );
 
+            // Limpiar selección principal.
             setArchivo(null);
 
+            // Limpiar selección de Resource Log.
+            setArchivosHistorialRecursos([]);
+
+            // Limpiar input del Excel principal.
             if (
                 inputArchivoRef.current
             ) {
                 inputArchivoRef.current.value =
+                    "";
+            }
+
+            // Limpiar input de Resource Log.
+            const inputHistorial =
+                document.getElementById(
+                    "historial-recursos"
+                );
+
+            if (inputHistorial) {
+                inputHistorial.value =
                     "";
             }
 
@@ -224,7 +306,7 @@ function ImportarPage() {
             const mensaje =
                 error.response?.data?.mensaje ||
                 error.response?.data?.error ||
-                "No se pudo procesar el archivo OFSC.";
+                "No se pudo procesar la importación.";
 
             setMensajeError(mensaje);
         } finally {
@@ -239,6 +321,21 @@ function ImportarPage() {
         resumen?.sinCambios ??
         resumen?.duplicadas ??
         0;
+
+    const detalleRechazadas =
+        Array.isArray(
+            resumen?.detalleRechazadas
+        )
+            ? resumen.detalleRechazadas
+            : [];
+
+    const tieneRechazadas =
+        Number(
+            resumen?.rechazadas ?? 0
+        ) > 0;
+
+    const detalleRechazadasVisible =
+        detalleRechazadas.slice(0, 100);
 
     // =====================================
     // FILTRAR HISTORIAL
@@ -357,6 +454,27 @@ function ImportarPage() {
                     <small>
                         Formatos permitidos: .xlsx y .xls
                     </small>
+
+                    <div className="campo-archivo">
+                        <label htmlFor="historial-recursos">
+                            Historial de Recursos OFSC
+                        </label>
+
+                        <input
+                            id="historial-recursos"
+                            type="file"
+                            accept=".xlsx,.xls"
+                            multiple
+                            onChange={
+                                seleccionarHistorialRecursos
+                            }
+                            disabled={importando}
+                        />
+
+                        <small>
+                            Puede seleccionar hasta 20 archivos Resource Log.
+                        </small>
+                    </div>
                 </div>
 
                 {archivo && (
@@ -368,6 +486,25 @@ function ImportarPage() {
                     </div>
                 )}
 
+                {archivosHistorialRecursos.length >
+                    0 && (
+                    <div className="archivo-seleccionado">
+                        <strong>
+                            Historiales seleccionados:
+                        </strong>{" "}
+                        {
+                            archivosHistorialRecursos.length
+                        }{" "}
+                        archivo
+                        {
+                            archivosHistorialRecursos.length ===
+                            1
+                                ? ""
+                                : "s"
+                        }
+                    </div>
+                )}
+
                 <button
                     type="button"
                     className="boton-importar"
@@ -375,7 +512,7 @@ function ImportarPage() {
                     disabled={importando}
                 >
                     {importando
-                        ? "Procesando archivo..."
+                        ? "Procesando archivos..."
                         : "Importar y sincronizar"}
                 </button>
             </div>
@@ -388,7 +525,15 @@ function ImportarPage() {
 
             {resultado && (
                 <div className="resultado-importacion">
-                    <div className="mensaje mensaje-exito">
+                    <div
+                        className={
+                            `mensaje ${
+                                tieneRechazadas
+                                    ? "mensaje-advertencia"
+                                    : "mensaje-exito"
+                            }`
+                        }
+                    >
                         {resultado.mensaje}
                     </div>
 
@@ -460,6 +605,182 @@ function ImportarPage() {
                                 </strong>
                             </div>
                         </div>
+                    )}
+
+                    {resultado.historialRecursos && (
+                        <div className="resumen-importacion">
+                            <div className="resumen-item">
+                                <span>
+                                    Resource Log
+                                </span>
+
+                                <strong>
+                                    {
+                                        resultado
+                                            .resumen
+                                            ?.totalArchivos ??
+                                        resultado
+                                            .historialRecursos
+                                            .length ??
+                                        0
+                                    }
+                                </strong>
+                            </div>
+
+                            <div className="resumen-item">
+                                <span>
+                                    Eventos
+                                </span>
+
+                                <strong>
+                                    {
+                                        resultado
+                                            .resumen
+                                            ?.totalEventos ??
+                                        0
+                                    }
+                                </strong>
+                            </div>
+
+                            <div className="resumen-item">
+                                <span>
+                                    Nuevos
+                                </span>
+
+                                <strong>
+                                    {
+                                        resultado
+                                            .resumen
+                                            ?.insertados ??
+                                        0
+                                    }
+                                </strong>
+                            </div>
+
+                            <div className="resumen-item">
+                                <span>
+                                    Duplicados
+                                </span>
+
+                                <strong>
+                                    {
+                                        resultado
+                                            .resumen
+                                            ?.duplicados ??
+                                        0
+                                    }
+                                </strong>
+                            </div>
+                        </div>
+                    )}
+                    {Array.isArray(
+                        resultado.historialRecursos
+                    ) &&
+                        resultado.historialRecursos.length > 0 && (
+                            <div className="detalle-recursos-importados">
+                                <h3>
+                                    Detalle de Resource Log por ET
+                                </h3>
+
+                                <div className="tabla-recursos-contenedor">
+                                    <table className="tabla-recursos-importados">
+                                        <thead>
+                                            <tr>
+                                                <th>ET</th>
+                                                <th>Eventos</th>
+                                                <th>Nuevos</th>
+                                                <th>Duplicados</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {resultado.historialRecursos.map(
+                                                (item, indice) => (
+                                                    <tr
+                                                        key={`${item.idTecnico}-${indice}`}
+                                                    >
+                                                        <td>
+                                                            <strong>
+                                                                {item.tecnico ||
+                                                                    "ET no identificado"}
+                                                            </strong>
+                                                        </td>
+
+                                                        <td>
+                                                            {item.totalEventos ??
+                                                                0}
+                                                        </td>
+
+                                                        <td>
+                                                            {item.insertados ??
+                                                                0}
+                                                        </td>
+
+                                                        <td>
+                                                            {item.duplicados ??
+                                                                0}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+                    {detalleRechazadas.length > 0 && (
+                        <section className="detalle-rechazadas">
+                            <h3>
+                                Filas que requieren revisión
+                            </h3>
+
+                            <div className="detalle-rechazadas-lista">
+                                {detalleRechazadasVisible.map(
+                                    (
+                                        rechazo,
+                                        indice
+                                    ) => (
+                                        <div
+                                            className="detalle-rechazo-item"
+                                            key={
+                                                `${rechazo.fila ?? "sin-fila"}-${indice}`
+                                            }
+                                        >
+                                            <strong>
+                                                Fila{" "}
+                                                {rechazo.fila ??
+                                                    "sin número"}
+                                            </strong>
+
+                                            <span>
+                                                OT:{" "}
+                                                {rechazo.codigoOT ||
+                                                    "vacía"}
+                                            </span>
+
+                                            <span>
+                                                Actividad:{" "}
+                                                {rechazo.idActividadOFSC ||
+                                                    "vacía"}
+                                            </span>
+
+                                            <p>
+                                                {
+                                                    rechazo.motivo
+                                                }
+                                            </p>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+
+                            {detalleRechazadas.length >
+                                detalleRechazadasVisible.length && (
+                                <p className="detalle-rechazadas-limite">
+                                    Se muestran las primeras 100 filas. El total rechazado está registrado en la operación.
+                                </p>
+                            )}
+                        </section>
                     )}
 
                     <div className="importar-nota">
@@ -626,29 +947,69 @@ function ImportarPage() {
                                                                     </strong>
                                                                 </span>
 
-                                                                <span>
-                                                                    Asignadas:{" "}
-                                                                    <strong>
-                                                                        {operacion.CantidadAsignadas ??
-                                                                            0}
-                                                                    </strong>
-                                                                </span>
+                                                                {esImportacionV2(
+                                                                    operacion
+                                                                ) ? (
+                                                                    <>
+                                                                        <span>
+                                                                            Nuevas:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadNuevas ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
 
-                                                                <span>
-                                                                    Pendientes:{" "}
-                                                                    <strong>
-                                                                        {operacion.CantidadPendientes ??
-                                                                            0}
-                                                                    </strong>
-                                                                </span>
+                                                                        <span>
+                                                                            Actualizadas:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadActualizadas ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
 
-                                                                <span>
-                                                                    Finalizadas:{" "}
-                                                                    <strong>
-                                                                        {operacion.CantidadFinalizadas ??
-                                                                            0}
-                                                                    </strong>
-                                                                </span>
+                                                                        <span>
+                                                                            Sin cambios:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadSinCambios ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
+
+                                                                        <span>
+                                                                            Errores:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadErrores ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <span>
+                                                                            Asignadas:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadAsignadas ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
+
+                                                                        <span>
+                                                                            Pendientes:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadPendientes ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
+
+                                                                        <span>
+                                                                            Finalizadas:{" "}
+                                                                            <strong>
+                                                                                {operacion.CantidadFinalizadas ??
+                                                                                    0}
+                                                                            </strong>
+                                                                        </span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </td>
 

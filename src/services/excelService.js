@@ -2,6 +2,12 @@ const XLSX = require("xlsx");
 
 const mapa = require("../config/mapaColumnas");
 
+function registrarResumenLectura(...valores) {
+    if (process.env.NODE_ENV !== "test") {
+        console.log(...valores);
+    }
+}
+
 /**
  * Limpia valores de texto.
  */
@@ -372,6 +378,8 @@ function normalizarEstadoActividad(valor) {
     const equivalencias = {
         PENDIENTE: "PENDIENTE",
 
+        "EN RUTA": "EN_RUTA",
+
         INICIADO: "INICIADA",
         INICIADA: "INICIADA",
 
@@ -430,7 +438,7 @@ function normalizarTipoCierre(valor) {
  * Cada fila se interpreta como una actividad.
  * Una misma OT puede tener varias actividades.
  */
-function leerExcel(rutaArchivo) {
+function leerExcelConDetalle(rutaArchivo) {
     const workbook = XLSX.readFile(
         rutaArchivo,
         {
@@ -462,10 +470,16 @@ function leerExcel(rutaArchivo) {
     );
 
     if (filas.length === 0) {
-        return [];
+        return {
+            actividades: [],
+            filasRechazadas: [],
+            totalFilasLeidas: 0,
+            nombreHoja
+        };
     }
 
     const actividades = [];
+    const filasRechazadas = [];
 
     let omitidasSinActividad = 0;
     let omitidasSinOT = 0;
@@ -476,15 +490,27 @@ function leerExcel(rutaArchivo) {
         new Set();
 
     const conteoEstados = {
-        PENDIENTE: 0,
-        INICIADA: 0,
-        SUSPENDIDA: 0,
-        NO_REALIZADO: 0,
-        FINALIZADA: 0,
-        CANCELADA: 0
-    };
+    PENDIENTE: 0,
+    INICIADA: 0,
+    SUSPENDIDA: 0,
+    NO_REALIZADO: 0,
+    FINALIZADA: 0,
+    CANCELADA: 0,
+    EN_RUTA: 0
+};
 
-    for (const fila of filas) {      
+    for (
+        let indice = 0;
+        indice < filas.length;
+        indice++
+    ) {
+        const fila = filas[indice];
+
+        const numeroFilaExcel =
+            Number.isInteger(fila.__rowNum__)
+                ? fila.__rowNum__ + 1
+                : indice + 2;
+
         const idActividadOFSC = limpiarTexto(
             obtenerValor(
                 fila,
@@ -509,16 +535,43 @@ function leerExcel(rutaArchivo) {
 
         if (!idActividadOFSC) {
             omitidasSinActividad++;
+
+            filasRechazadas.push({
+                fila: numeroFilaExcel,
+                codigoOT,
+                idActividadOFSC: null,
+                motivo:
+                    "La fila no contiene ID de actividad OFSC."
+            });
+
             continue;
         }
 
         if (!codigoOT) {
             omitidasSinOT++;
+
+            filasRechazadas.push({
+                fila: numeroFilaExcel,
+                codigoOT: null,
+                idActividadOFSC,
+                motivo:
+                    "La fila no contiene Código OT."
+            });
+
             continue;
         }
 
         if (!estadoOriginal) {
             omitidasSinEstado++;
+
+            filasRechazadas.push({
+                fila: numeroFilaExcel,
+                codigoOT,
+                idActividadOFSC,
+                motivo:
+                    "La fila no contiene estado de actividad OFSC."
+            });
+
             continue;
         }
 
@@ -534,6 +587,14 @@ function leerExcel(rutaArchivo) {
                 estadoOriginal
             );
 
+            filasRechazadas.push({
+                fila: numeroFilaExcel,
+                codigoOT,
+                idActividadOFSC,
+                motivo:
+                    `El estado OFSC "${estadoOriginal}" no es reconocido.`
+            });
+
             continue;
         }
 
@@ -548,6 +609,8 @@ function leerExcel(rutaArchivo) {
             );
   
         actividades.push({
+            numeroFilaExcel,
+
             /*
              * Identificación de actividad y OT.
              */
@@ -563,7 +626,12 @@ function leerExcel(rutaArchivo) {
                     mapa.codigoServicio
                 )
             ),
-
+            codigoPuntoVenta: limpiarTexto(
+                obtenerValor(
+                    fila,
+                    mapa.codigoPuntoVenta
+                )
+            ),
             productoPlan: limpiarTexto(
                 obtenerValor(
                     fila,
@@ -640,7 +708,14 @@ function leerExcel(rutaArchivo) {
                     mapa.recursosXML
                 )
             ),
-
+            
+            recurso: limpiarTexto(
+                obtenerValor(
+                    fila,
+                    mapa.recurso
+                )
+            ),
+            
             rfs: limpiarTexto(
                 obtenerValor(
                     fila,
@@ -789,57 +864,74 @@ function leerExcel(rutaArchivo) {
         });
     }
 
-    console.log(
+    registrarResumenLectura(
         "========== RESUMEN LECTURA OFSC =========="
     );
 
-    console.log(
+    registrarResumenLectura(
         `Hoja procesada: ${nombreHoja}`
     );
 
-    console.log(
+    registrarResumenLectura(
         `Filas encontradas: ${filas.length}`
     );
 
-    console.log(
+    registrarResumenLectura(
         `Actividades válidas: ${actividades.length}`
     );
 
-    console.log(
+    registrarResumenLectura(
         "Estados encontrados:",
         conteoEstados
     );
 
-    console.log(
+    registrarResumenLectura(
         `Omitidas sin ID de actividad: ${omitidasSinActividad}`
     );
 
-    console.log(
+    registrarResumenLectura(
         `Omitidas sin Código OT: ${omitidasSinOT}`
     );
 
-    console.log(
+    registrarResumenLectura(
         `Omitidas sin estado: ${omitidasSinEstado}`
     );
 
-    console.log(
+    registrarResumenLectura(
         `Omitidas por estado desconocido: ${omitidasEstadoDesconocido}`
     );
 
     if (estadosNoReconocidos.size > 0) {
-        console.log(
+        registrarResumenLectura(
             "Estados no reconocidos:",
             [...estadosNoReconocidos]
         );
     }
 
-    console.log(
+    registrarResumenLectura(
         "==========================================="
     );
 
-    return actividades;
+    return {
+        actividades,
+        filasRechazadas,
+        totalFilasLeidas:
+            filas.length,
+        nombreHoja
+    };
+}
+
+/**
+ * Mantiene la respuesta histórica para cualquier
+ * consumidor que solo necesite actividades válidas.
+ */
+function leerExcel(rutaArchivo) {
+    return leerExcelConDetalle(
+        rutaArchivo
+    ).actividades;
 }
 
 module.exports = {
-    leerExcel
+    leerExcel,
+    leerExcelConDetalle
 };

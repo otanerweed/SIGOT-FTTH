@@ -44,6 +44,18 @@ const auditoriaRoutes = require(
 const seguimientoRoutes = require(
     "./routes/seguimientoRoutes"
 );
+const controlOperativoRoutes = require(
+    "./routes/controlOperativoRoutes"
+);
+const tssRoutes = require(
+    "./routes/tssRoutes"
+);
+
+const {
+    manejarErrores
+} = require(
+    "./middlewares/errorMiddleware"
+);
 
 // =====================================
 // MIDDLEWARE DE AUTENTICACIÓN
@@ -151,8 +163,29 @@ app.use(
 );// =====================================
 // SEGUIMIENTO OT
 // =====================================
+
 app.use(
     "/api/seguimiento",
     seguimientoRoutes
 );
+// =====================================
+// CONTROL OPERATIVO
+// =====================================
+app.use(
+    "/api/control-operativo",
+    controlOperativoRoutes
+);
+// =====================================
+// TSS
+// =====================================
+app.use(
+    "/api/tss",
+    tssRoutes
+);
+
+// =====================================
+// MANEJO CENTRALIZADO DE ERRORES
+// =====================================
+app.use(manejarErrores);
+
 module.exports = app;

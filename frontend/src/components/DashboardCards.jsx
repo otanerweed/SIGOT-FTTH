@@ -531,6 +531,85 @@ function DashboardCards({
                         })
                     )
         );
+
+
+        const actividadesPendientes =
+            detalleWinet.flatMap(
+                (item) =>
+                    (item.actividades || [])
+                        .filter(
+                            (actividad) =>
+                                String(
+                                    actividad.estado || ""
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                "PENDIENTE"
+                        )
+                        .map(
+                            (actividad) => ({
+                                ...actividad,
+                                et:
+                                    item.et,
+                                celula:
+                                    item.celula,
+                                supervisor:
+                                    item.supervisor
+                            })
+                        )
+            );
+
+        const actividadesEnRuta =
+            detalleWinet.flatMap(
+                (item) =>
+                    (item.actividades || [])
+                        .filter(
+                            (actividad) =>
+                                String(
+                                    actividad.estado || ""
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                "EN_RUTA"
+                        )
+                        .map(
+                            (actividad) => ({
+                                ...actividad,
+                                et:
+                                    item.et,
+                                celula:
+                                    item.celula,
+                                supervisor:
+                                    item.supervisor
+                            })
+                        )
+            );
+
+        const actividadesIniciadas =
+            detalleWinet.flatMap(
+                (item) =>
+                    (item.actividades || [])
+                        .filter(
+                            (actividad) =>
+                                String(
+                                    actividad.estado || ""
+                                )
+                                    .trim()
+                                    .toUpperCase() ===
+                                "INICIADA"
+                        )
+                        .map(
+                            (actividad) => ({
+                                ...actividad,
+                                et:
+                                    item.et,
+                                celula:
+                                    item.celula,
+                                supervisor:
+                                    item.supervisor
+                            })
+                        )
+            );
     const consolidadoOTETSeleccionado =
         consolidadoOTWinet.filter(
             (ot) =>
@@ -669,6 +748,7 @@ function DashboardCards({
                 SUSPENDIDA: "Suspendida",
                 INICIADA: "Iniciada",
                 PENDIENTE: "Pendiente",
+                EN_RUTA: "En ruta",
                 CANCELADA: "Cancelada",
                 ASIGNADA: "Asignada"
             };
@@ -890,7 +970,7 @@ function DashboardCards({
                     </div>
 
                     <span className="dashboardCardDetalle">
-                        Válidas: excluye canceladas y suspendidas
+                        Finalizadas + no realizadas
                     </span>
                 </article>
 
@@ -1003,7 +1083,145 @@ function DashboardCards({
                 </div>
 
                 <div className="dashboardCards dashboardCardsKPI">
+                
 
+                <article
+                    className={`dashboardCard dashboardCard--warning ${
+                        eventoOperativoSeleccionado === "PENDIENTES"
+                            ? "dashboardCard--seleccionada"
+                            : ""
+                    }`}
+                    onClick={() => {
+                        setEventoOperativoSeleccionado(
+                            (actual) =>
+                                actual === "PENDIENTES"
+                                    ? null
+                                    : "PENDIENTES"
+                        );
+                        setOtSeleccionada(null);
+                    }}
+                    style={{
+                        cursor: "pointer"
+                    }}
+                >
+                    <div className="dashboardCardCabecera">
+                        <span className="dashboardCardTitulo">
+                            Pendientes
+                        </span>
+
+                        <span
+                            className="dashboardCardIndicador"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div className="dashboardCardValor">
+                        {datosKPI.pendientes ?? 0}
+                    </div>
+
+                    <span className="dashboardCardDetalle">
+                        Actividades pendientes de atención
+                    </span>
+                </article>
+
+                <article
+                    className={`dashboardCard dashboardCard--info ${
+                        eventoOperativoSeleccionado === "EN_RUTA"
+                            ? "dashboardCard--seleccionada"
+                            : ""
+                    }`}
+                    onClick={() => {
+                        setEventoOperativoSeleccionado(
+                            (actual) =>
+                                actual === "EN_RUTA"
+                                    ? null
+                                    : "EN_RUTA"
+                        );
+                        setOtSeleccionada(null);
+                    }}
+                    style={{
+                        cursor: "pointer"
+                    }}
+                >
+                    <div className="dashboardCardCabecera">
+                        <span className="dashboardCardTitulo">
+                            En ruta
+                        </span>
+
+                        <span
+                            className="dashboardCardIndicador"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div className="dashboardCardValor">
+                        {datosKPI.enRuta ?? 0}
+                    </div>
+
+                    <span className="dashboardCardDetalle">
+                        Actividades con desplazamiento en curso
+                    </span>
+                </article>
+
+                <article
+                    className={`dashboardCard dashboardCard--info ${
+                        eventoOperativoSeleccionado === "INICIADAS"
+                            ? "dashboardCard--seleccionada"
+                            : ""
+                    }`}
+                    onClick={() => {
+                        setEventoOperativoSeleccionado(
+                            (actual) =>
+                                actual === "INICIADAS"
+                                    ? null
+                                    : "INICIADAS"
+                        );
+                        setOtSeleccionada(null);
+                    }}
+                    style={{
+                        cursor: "pointer"
+                    }}
+                >
+                    <div className="dashboardCardCabecera">
+                        <span className="dashboardCardTitulo">
+                            Iniciadas
+                        </span>
+
+                        <span
+                            className="dashboardCardIndicador"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div className="dashboardCardValor">
+                        {datosKPI.iniciadas ?? 0}
+                    </div>
+
+                    <span className="dashboardCardDetalle">
+                        Actividades en ejecución
+                    </span>
+                </article>
+
+                <article className="dashboardCard dashboardCard--neutral">
+                    <div className="dashboardCardCabecera">
+                        <span className="dashboardCardTitulo">
+                            Canceladas
+                        </span>
+
+                        <span
+                            className="dashboardCardIndicador"
+                            aria-hidden="true"
+                        />
+                    </div>
+
+                    <div className="dashboardCardValor">
+                        {datosKPI.canceladas ?? 0}
+                    </div>
+
+                    <span className="dashboardCardDetalle">
+                        Canceladas en OFSC · sin acción operativa
+                    </span>
+                </article>
                     <article
                         className={`dashboardCard dashboardCard--warning ${
                             eventoOperativoSeleccionado === "REPROGRAMADAS"
@@ -1127,7 +1345,449 @@ function DashboardCards({
                     </article>
 
                 </div>
+                {eventoOperativoSeleccionado === "PENDIENTES" && (
+                    <div className="dashboardWinetActividades">
+                        <div className="dashboardWinetResumenTitulo">
+                            Actividades pendientes
+                        </div>
 
+                        {actividadesPendientes.length === 0 ? (
+                            <div className="dashboardWinetVacio">
+                                No hay actividades pendientes
+                                para los filtros seleccionados.
+                            </div>
+                        ) : (
+                            <div className="dashboardWinetTablaContenedor">
+                                <table className="dashboardWinetTabla">
+                                    <thead>
+                                        <tr>
+                                            <th>OT</th>
+                                            <th>ET</th>
+                                            <th>CÉLULA</th>
+                                            <th>SUPERVISOR</th>
+                                            <th>FECHA</th>
+                                            <th>ESTADO</th>
+                                            <th>INICIO</th>
+                                            <th>FIN</th>
+                                            <th>DURACIÓN</th>
+                                            <th>DISTRITO</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {actividadesPendientes.map(
+                                            (actividad) => (
+                                                <tr
+                                                    key={actividad.idActividad}
+                                                    onClick={() => {
+                                                        setOtSeleccionada(
+                                                            actividad.idOrden
+                                                        );
+
+                                                        setTimeout(() => {
+                                                            document
+                                                                .querySelector(
+                                                                    ".dashboardWinetTrazabilidad"
+                                                                )
+                                                                ?.scrollIntoView({
+                                                                    behavior: "smooth",
+                                                                    block: "start"
+                                                                });
+                                                        }, 0);
+                                                    }}
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        background:
+                                                            otSeleccionada ===
+                                                            actividad.idOrden
+                                                                ? "#eef5ff"
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    <td>
+                                                        {actividad.codigoOT ||
+                                                            actividad.idOrden ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.et || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.celula || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.supervisor ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.fechaActividad
+                                                            ? new Date(
+                                                                actividad.fechaActividad
+                                                            ).toLocaleDateString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        <span className="dashboardWinetEtiqueta dashboardWinetEtiqueta--pendiente">
+                                                            {formatearEstadoVisible(
+                                                                actividad.estado
+                                                            )}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaInicio
+                                                            ? new Date(
+                                                                actividad.horaInicio
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaFin
+                                                            ? new Date(
+                                                                actividad.horaFin
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatearDuracion(
+                                                            actividad.duracionMinutos
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.distrito || "—"}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+                            
+                {eventoOperativoSeleccionado === "EN_RUTA" && (
+                    <div className="dashboardWinetActividades">
+                        <div className="dashboardWinetResumenTitulo">
+                            Actividades en ruta
+                        </div>
+
+                        {actividadesEnRuta.length === 0 ? (
+                            <div className="dashboardWinetVacio">
+                                No hay actividades en ruta
+                                para los filtros seleccionados.
+                            </div>
+                        ) : (
+                            <div className="dashboardWinetTablaContenedor">
+                                <table className="dashboardWinetTabla">
+                                    <thead>
+                                        <tr>
+                                            <th>OT</th>
+                                            <th>ET</th>
+                                            <th>CÉLULA</th>
+                                            <th>SUPERVISOR</th>
+                                            <th>FECHA</th>
+                                            <th>ESTADO</th>
+                                            <th>INICIO</th>
+                                            <th>FIN</th>
+                                            <th>DURACIÓN</th>
+                                            <th>DISTRITO</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {actividadesEnRuta.map(
+                                            (actividad) => (
+                                                <tr
+                                                    key={actividad.idActividad}
+                                                    onClick={() => {
+                                                        setOtSeleccionada(
+                                                            actividad.idOrden
+                                                        );
+
+                                                        setTimeout(() => {
+                                                            document
+                                                                .querySelector(
+                                                                    ".dashboardWinetTrazabilidad"
+                                                                )
+                                                                ?.scrollIntoView({
+                                                                    behavior: "smooth",
+                                                                    block: "start"
+                                                                });
+                                                        }, 0);
+                                                    }}
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        background:
+                                                            otSeleccionada ===
+                                                            actividad.idOrden
+                                                                ? "#eef5ff"
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    <td>
+                                                        {actividad.codigoOT ||
+                                                            actividad.idOrden ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.et || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.celula || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.supervisor ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.fechaActividad
+                                                            ? new Date(
+                                                                actividad.fechaActividad
+                                                            ).toLocaleDateString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        <span className="dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta">
+                                                            {formatearEstadoVisible(
+                                                                actividad.estado
+                                                            )}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaInicio
+                                                            ? new Date(
+                                                                actividad.horaInicio
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaFin
+                                                            ? new Date(
+                                                                actividad.horaFin
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatearDuracion(
+                                                            actividad.duracionMinutos
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.distrito || "—"}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {eventoOperativoSeleccionado === "INICIADAS" && (
+                    <div className="dashboardWinetActividades">
+                        <div className="dashboardWinetResumenTitulo">
+                            Actividades iniciadas
+                        </div>
+
+                        {actividadesIniciadas.length === 0 ? (
+                            <div className="dashboardWinetVacio">
+                                No hay actividades iniciadas
+                                para los filtros seleccionados.
+                            </div>
+                        ) : (
+                            <div className="dashboardWinetTablaContenedor">
+                                <table className="dashboardWinetTabla">
+                                    <thead>
+                                        <tr>
+                                            <th>OT</th>
+                                            <th>ET</th>
+                                            <th>CÉLULA</th>
+                                            <th>SUPERVISOR</th>
+                                            <th>FECHA</th>
+                                            <th>ESTADO</th>
+                                            <th>INICIO</th>
+                                            <th>FIN</th>
+                                            <th>DURACIÓN</th>
+                                            <th>DISTRITO</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {actividadesIniciadas.map(
+                                            (actividad) => (
+                                                <tr
+                                                    key={actividad.idActividad}
+                                                    onClick={() => {
+                                                        setOtSeleccionada(
+                                                            actividad.idOrden
+                                                        );
+
+                                                        setTimeout(() => {
+                                                            document
+                                                                .querySelector(
+                                                                    ".dashboardWinetTrazabilidad"
+                                                                )
+                                                                ?.scrollIntoView({
+                                                                    behavior: "smooth",
+                                                                    block: "start"
+                                                                });
+                                                        }, 0);
+                                                    }}
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        background:
+                                                            otSeleccionada ===
+                                                            actividad.idOrden
+                                                                ? "#eef5ff"
+                                                                : undefined
+                                                    }}
+                                                >
+                                                    <td>
+                                                        {actividad.codigoOT ||
+                                                            actividad.idOrden ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.et || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.celula || "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.supervisor ||
+                                                            "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.fechaActividad
+                                                            ? new Date(
+                                                                actividad.fechaActividad
+                                                            ).toLocaleDateString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        <span className="dashboardWinetEtiqueta dashboardWinetEtiqueta--iniciada">
+                                                            {formatearEstadoVisible(
+                                                                actividad.estado
+                                                            )}
+                                                        </span>
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaInicio
+                                                            ? new Date(
+                                                                actividad.horaInicio
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.horaFin
+                                                            ? new Date(
+                                                                actividad.horaFin
+                                                            ).toLocaleTimeString(
+                                                                "es-PE",
+                                                                {
+                                                                    timeZone: "UTC",
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit"
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        {formatearDuracion(
+                                                            actividad.duracionMinutos
+                                                        )}
+                                                    </td>
+
+                                                    <td>
+                                                        {actividad.distrito || "—"}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
                 {eventoOperativoSeleccionado === "REPROGRAMADAS" && (
                     <div className="dashboardWinetActividades">
                         <div className="dashboardWinetResumenTitulo">
@@ -2263,7 +2923,11 @@ function DashboardCards({
                                                                         ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--noRealizado"
                                                                         : ot.estadoActual === "SUSPENDIDA"
                                                                             ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--suspendida"
-                                                                            : "dashboardWinetEtiqueta"
+                                                                            : ot.estadoActual === "PENDIENTE"
+                                                                                ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--pendiente"
+                                                                                : ot.estadoActual === "EN_RUTA"
+                                                                                    ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta"
+                                                                                    : "dashboardWinetEtiqueta"
                                                         }
                                                     >
                                                         {formatearEstadoVisible(ot.estadoActual)}
@@ -2651,7 +3315,15 @@ function DashboardCards({
                                                                 ciclo.segmentos.length - 1
                                                             ]?.estado === "SUSPENDIDA"
                                                                 ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--suspendida"
-                                                                : "dashboardWinetEtiqueta"
+                                                                : ciclo.segmentos?.[
+                                                                    ciclo.segmentos.length - 1
+                                                                ]?.estado === "PENDIENTE"
+                                                                    ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--pendiente"
+                                                                    : ciclo.segmentos?.[
+                                                                        ciclo.segmentos.length - 1
+                                                                    ]?.estado === "EN_RUTA"
+                                                                        ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta"
+                                                                        : "dashboardWinetEtiqueta"
                                             }
                                         >
                                             {formatearEstadoVisible(
@@ -2761,7 +3433,11 @@ function DashboardCards({
                                                                                 ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--noRealizado"
                                                                                 : segmento.estado === "SUSPENDIDA"
                                                                                     ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--suspendida"
-                                                                                    : "dashboardWinetEtiqueta"
+                                                                                    : segmento.estado === "PENDIENTE"
+                                                                                        ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--pendiente"
+                                                                                        : segmento.estado === "EN_RUTA"
+                                                                                            ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta"
+                                                                                            : "dashboardWinetEtiqueta"
                                                                 }
                                                             >
                                                                 {formatearEstadoVisible(segmento.estado)}
@@ -3007,7 +3683,11 @@ function DashboardCards({
                                                                     ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--noRealizado"
                                                                     : actividad.estado === "SUSPENDIDA"
                                                                         ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--suspendida"
-                                                                        : "dashboardWinetEtiqueta"
+                                                                        : actividad.estado === "PENDIENTE"
+                                                                            ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--pendiente"
+                                                                            : actividad.estado === "EN_RUTA"
+                                                                                ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta"
+                                                                                : "dashboardWinetEtiqueta"
                                                     }
                                                 >
                                                     {formatearEstadoVisible(actividad.estado)}

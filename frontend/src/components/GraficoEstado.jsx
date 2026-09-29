@@ -1,4 +1,8 @@
 import {
+    useMemo
+} from "react";
+
+import {
     PieChart,
     Pie,
     Cell,
@@ -7,72 +11,123 @@ import {
     Legend
 } from "recharts";
 
-function GraficoEstado({ dashboard }) {
-    const data = [
-        {
-            name: "Asignadas",
-            value: dashboard?.asignadas ?? 0
-        },
-        {
-            name: "Pendientes",
-            value: dashboard?.pendientes ?? 0
-        },
-        {
-            name: "Finalizadas",
-            value: dashboard?.finalizadas ?? 0
-        },
-        {
-            name: "Canceladas",
-            value: dashboard?.canceladas ?? 0
-        }
-    ];
+function GraficoEstado({
+    kpis
+}) {
+
+    const datosKPI =
+        kpis?.kpis || {};
+
+    const data = useMemo(
+        () => [
+            {
+                name: "Finalizadas",
+                value:
+                    Number(
+                        datosKPI.finalizadas
+                    ) || 0
+            },
+            {
+                name: "No realizadas",
+                value:
+                    Number(
+                        datosKPI.noRealizados
+                    ) || 0
+            }
+        ],
+        [
+            datosKPI.finalizadas,
+            datosKPI.noRealizados
+        ]
+    );
 
     const colores = [
-        "#0B5394",
-        "#E69138",
         "#38761D",
         "#CC0000"
     ];
 
-    const dataConValores = data.filter(
-        (elemento) => elemento.value > 0
-    );
+    const dataConValores =
+        data.filter(
+            (elemento) =>
+                elemento.value > 0
+        );
 
     return (
         <div className="dashboardGrafico">
-            <h3>Estado de las órdenes</h3>
+
+            <div className="dashboardGraficoEncabezado">
+
+                <div>
+                    <h3>
+                        Resultado de actividades
+                    </h3>
+
+                    <p>
+                        Finalizadas y no realizadas según los filtros aplicados.
+                    </p>
+                </div>
+
+            </div>
+
+            <div className="dashboardGraficoProyectoActivo">
+
+                Mostrando:{" "}
+
+                <strong>
+                    RED WINET
+                </strong>
+
+            </div>
 
             {dataConValores.length === 0 ? (
+
                 <div className="dashboardSinDatos">
-                    No existen órdenes para mostrar.
+                    No existen actividades RED WINET para los filtros seleccionados.
                 </div>
+
             ) : (
+
                 <ResponsiveContainer
                     width="100%"
                     height={320}
                 >
                     <PieChart>
+
                         <Pie
-                            data={dataConValores}
+                            data={
+                                dataConValores
+                            }
                             dataKey="value"
                             nameKey="name"
                             outerRadius={105}
-                            label={({ name, value }) =>
-                                `${name}: ${value}`
+                            label={
+                                ({
+                                    name,
+                                    value
+                                }) =>
+                                    `${name}: ${value}`
                             }
                         >
+
                             {dataConValores.map(
-                                (elemento) => {
+                                (
+                                    elemento
+                                ) => {
+
                                     const indiceOriginal =
                                         data.findIndex(
-                                            (item) =>
+                                            (
+                                                item
+                                            ) =>
                                                 item.name ===
                                                 elemento.name
                                         );
 
                                     return (
                                         <Cell
-                                            key={elemento.name}
+                                            key={
+                                                elemento.name
+                                            }
                                             fill={
                                                 colores[
                                                     indiceOriginal
@@ -80,16 +135,21 @@ function GraficoEstado({ dashboard }) {
                                             }
                                         />
                                     );
+
                                 }
                             )}
+
                         </Pie>
 
                         <Tooltip />
 
                         <Legend />
+
                     </PieChart>
                 </ResponsiveContainer>
+
             )}
+
         </div>
     );
 }

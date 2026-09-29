@@ -1,5 +1,16 @@
 const multer = require("multer");
 const path = require("path");
+const crypto = require("crypto");
+
+const limiteConfiguradoMB = Number(
+    process.env.MAX_EXCEL_MB
+);
+
+const limiteExcelMB =
+    Number.isFinite(limiteConfiguradoMB) &&
+    limiteConfiguradoMB > 0
+        ? limiteConfiguradoMB
+        : 20;
 
 // Configuración del almacenamiento
 const storage = multer.diskStorage({
@@ -10,7 +21,12 @@ const storage = multer.diskStorage({
 
     filename: (req, file, cb) => {
 
-        const nombre = Date.now() + path.extname(file.originalname);
+        const extension = path
+            .extname(file.originalname)
+            .toLowerCase();
+
+        const nombre =
+            `${Date.now()}-${crypto.randomUUID()}${extension}`;
 
         cb(null, nombre);
 
@@ -43,7 +59,15 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
 
     storage,
-    fileFilter
+    fileFilter,
+
+    limits: {
+        files: 1,
+        fileSize:
+            limiteExcelMB *
+            1024 *
+            1024
+    }
 
 });
 

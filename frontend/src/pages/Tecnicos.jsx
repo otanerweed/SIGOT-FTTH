@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import DisponibilidadTecnico from "../components/DisponibilidadTecnico";
 import {
     actualizarEstadoTecnico,
     actualizarTecnico,
@@ -33,7 +33,11 @@ function Tecnicos() {
 
     const [mensaje, setMensaje] = useState("");
     const [error, setError] = useState("");
+    const [tecnicoDisponibilidad, setTecnicoDisponibilidad] =
+        useState(null);
 
+    const [disponibilidadAbierta, setDisponibilidadAbierta] =
+        useState(false);
     useEffect(() => {
         cargarTecnicos();
     }, []);
@@ -173,7 +177,15 @@ function Tecnicos() {
             );
         }
     }
+    function abrirDisponibilidad(tecnico) {
+        setTecnicoDisponibilidad(tecnico);
+        setDisponibilidadAbierta(true);
+    }
 
+    function cerrarDisponibilidad() {
+        setDisponibilidadAbierta(false);
+        setTecnicoDisponibilidad(null);
+    }
     async function guardarTecnico(evento) {
         evento.preventDefault();
 
@@ -586,6 +598,16 @@ function Tecnicos() {
                                                     <div className="acciones-tecnico">
                                                         <button
                                                             type="button"
+                                                            className="boton-disponibilidad"
+                                                            onClick={() =>
+                                                                abrirDisponibilidad(tecnico)
+                                                            }
+                                                            disabled={!tecnico.Activo}
+                                                        >
+                                                            Disponibilidad
+                                                        </button>
+                                                        <button
+                                                            type="button"
                                                             className="boton-editar"
                                                             onClick={() =>
                                                                 editarTecnico(
@@ -626,6 +648,11 @@ function Tecnicos() {
                         </div>
                     )}
             </section>
+            <DisponibilidadTecnico
+                tecnico={tecnicoDisponibilidad}
+                abierto={disponibilidadAbierta}
+                onCerrar={cerrarDisponibilidad}
+            />
         </section>
     );
 }
