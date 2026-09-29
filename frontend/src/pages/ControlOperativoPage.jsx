@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { obtenerToken } from "../services/authService";
+import { API_BASE_URL } from "../services/api";
 import "./ControlOperativoPage.css";
 import html2canvas from "html2canvas";
 import * as XLSX from "xlsx";
@@ -111,9 +112,8 @@ function ControlOperativoPage() {
             setError("");
 
             const token = obtenerToken();
-
             const respuesta = await fetch(
-                `http://localhost:3001/api/control-operativo/ruta?fecha=${fecha}`,
+                `${API_BASE_URL}/control-operativo/ruta?fecha=${fecha}`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`
@@ -213,7 +213,7 @@ function ControlOperativoPage() {
         // =====================================
 
         const respuesta = await fetch(
-            `http://localhost:3001/api/control-operativo/reporte-semanal?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
+            `${API_BASE_URL}/control-operativo/reporte-semanal?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -485,7 +485,7 @@ function ControlOperativoPage() {
 
             if (horaCorreccion) {
                 const respuestaInicio = await fetch(
-                    "http://localhost:3001/api/control-operativo/ruta/correccion",
+                    `${API_BASE_URL}/control-operativo/ruta/correccion`,
                     {
                         method: "POST",
                         headers: {
@@ -521,7 +521,7 @@ function ControlOperativoPage() {
 
             if (horaCierreCorreccion) {
                 const respuestaCierre = await fetch(
-                    "http://localhost:3001/api/control-operativo/ruta/cierre/correccion",
+                    `${API_BASE_URL}/control-operativo/ruta/cierre/correccion`,
                     {
                         method: "POST",
                         headers: {
@@ -598,7 +598,7 @@ function ControlOperativoPage() {
             const token = obtenerToken();
 
             const respuesta = await fetch(
-                "http://localhost:3001/api/control-operativo/ruta/jornada",
+                `${API_BASE_URL}/control-operativo/ruta/jornada`,
                 {
                     method: "POST",
                     headers: {

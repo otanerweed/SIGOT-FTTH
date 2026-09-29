@@ -3,8 +3,12 @@ import axios from "axios";
 const TOKEN_KEY = "sigot_token";
 const USUARIO_KEY = "sigot_usuario";
 
+export const API_BASE_URL =
+    process.env.REACT_APP_API_URL ||
+    "http://localhost:3001/api";
+
 const api = axios.create({
-    baseURL: "http://localhost:3001/api"
+    baseURL: API_BASE_URL
 });
 
 // =====================================
