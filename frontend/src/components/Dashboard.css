@@ -960,7 +960,25 @@
     color: #991b1b;
     background: #fee2e2;
 }
+.dashboardWinetEstado--aTiempo {
+    color: #166534;
+    background: #dcfce7;
+}
 
+.dashboardWinetEstado--enRiesgo {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.dashboardWinetEstado--atrasado {
+    color: #c2410c;
+    background: #ffedd5;
+}
+
+.dashboardWinetEstado--fueraTiempo {
+    color: #b91c1c;
+    background: #fee2e2;
+}
 /* =====================================
    TARJETA OPERATIVA SELECCIONADA
 ===================================== */

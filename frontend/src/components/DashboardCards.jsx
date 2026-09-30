@@ -53,6 +53,17 @@ function DashboardCards({
     const [ordenEspecialistas, setOrdenEspecialistas] =
         useState(null);
 
+    const [horaActual, setHoraActual] =
+        useState(new Date());
+
+        useEffect(() => {
+        const intervalo = setInterval(() => {
+            setHoraActual(new Date());
+        }, 30000);
+
+        return () => clearInterval(intervalo);
+    }, []);
+
     useEffect(() => {
         setEventoOperativoSeleccionado(null);
         setOtSeleccionada(null);
@@ -598,17 +609,93 @@ function DashboardCards({
                                     .toUpperCase() ===
                                 "INICIADA"
                         )
-                        .map(
-                            (actividad) => ({
+                        .map((actividad) => {
+
+                            const fechaInicio =
+                                actividad.fechaActividad &&
+                                actividad.horaInicio
+                                    ? new Date(
+                                        `${new Date(
+                                            actividad.fechaActividad
+                                        ).toISOString().slice(0, 10)}T${new Date(
+                                            actividad.horaInicio
+                                        ).toISOString().slice(11, 19)}`
+                                    )
+                                    : null;
+
+                            const inicioValido =
+                                fechaInicio &&
+                                !Number.isNaN(
+                                    fechaInicio.getTime()
+                                );
+
+                            const tiempoTranscurridoMinutos =
+                                inicioValido
+                                    ? Math.max(
+                                        0,
+                                        Math.floor(
+                                            (
+                                                horaActual.getTime() -
+                                                fechaInicio.getTime()
+                                            ) / 60000
+                                        )
+                                    )
+                                    : null;
+
+                            const limiteMinutos = 210;
+
+                            const tiempoRestanteMinutos =
+                                tiempoTranscurridoMinutos !== null
+                                    ? limiteMinutos -
+                                    tiempoTranscurridoMinutos
+                                    : null;
+
+                            let estadoTiempo =
+                                "SIN HORA";
+
+                            if (
+                                tiempoTranscurridoMinutos !== null
+                            ) {
+                                if (
+                                    tiempoTranscurridoMinutos < 120
+                                ) {
+                                    estadoTiempo =
+                                        "A TIEMPO";
+                                } else if (
+                                    tiempoTranscurridoMinutos < 180
+                                ) {
+                                    estadoTiempo =
+                                        "EN RIESGO";
+                                } else if (
+                                    tiempoTranscurridoMinutos < 210
+                                ) {
+                                    estadoTiempo =
+                                        "ATRASADO";
+                                } else {
+                                    estadoTiempo =
+                                        "FUERA DE TIEMPO";
+                                }
+                            }
+
+                            return {
                                 ...actividad,
+
                                 et:
                                     item.et,
+
                                 celula:
                                     item.celula,
+
                                 supervisor:
-                                    item.supervisor
-                            })
-                        )
+                                    item.supervisor,
+
+                                tiempoTranscurridoMinutos,
+
+                                tiempoRestanteMinutos,
+
+                                estadoTiempo
+                            };
+                        })
             );
     const consolidadoOTETSeleccionado =
         consolidadoOTWinet.filter(
@@ -1460,24 +1547,11 @@ function DashboardCards({
                                                     </td>
 
                                                     <td>
-                                                        {actividad.horaFin
-                                                            ? new Date(
-                                                                actividad.horaFin
-                                                            ).toLocaleTimeString(
-                                                                "es-PE",
-                                                                {
-                                                                    timeZone: "UTC",
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit"
-                                                                }
-                                                            )
-                                                            : "—"}
+                                                        {"—"}
                                                     </td>
 
                                                     <td>
-                                                        {formatearDuracion(
-                                                            actividad.duracionMinutos
-                                                        )}
+                                                                {"—"}
                                                     </td>
 
                                                     <td>
@@ -1664,8 +1738,9 @@ function DashboardCards({
                                             <th>FECHA</th>
                                             <th>ESTADO</th>
                                             <th>INICIO</th>
-                                            <th>FIN</th>
-                                            <th>DURACIÓN</th>
+                                            <th>TIEMPO TRANSCURRIDO</th>
+                                            <th>RESTANTE</th>
+                                            <th>ESTADO OPERATIVO</th>
                                             <th>DISTRITO</th>
                                         </tr>
                                     </thead>
@@ -1756,11 +1831,43 @@ function DashboardCards({
                                                     </td>
 
                                                     <td>
-                                                        {"—"}
+                                                        {actividad.tiempoTranscurridoMinutos !== null
+                                                            ? formatearDuracion(
+                                                                actividad.tiempoTranscurridoMinutos
+                                                            )
+                                                            : "—"}
                                                     </td>
 
                                                     <td>
-                                                        {"—"}
+                                                        {actividad.tiempoRestanteMinutos !== null
+                                                            ? actividad.tiempoRestanteMinutos < 0
+                                                                ? `Excedido: ${formatearDuracion(
+                                                                Math.abs(
+                                                                    actividad.tiempoRestanteMinutos
+                                                                )
+                                                            )}`
+                                                                : formatearDuracion(
+                                                                    actividad.tiempoRestanteMinutos
+                                                                )
+                                                            : "—"}
+                                                    </td>
+
+                                                    <td>
+                                                        <span
+                                                            className={
+                                                                actividad.estadoTiempo === "A TIEMPO"
+                                                                    ? "dashboardWinetEtiqueta dashboardWinetEstado--aTiempo"
+                                                                    : actividad.estadoTiempo === "EN RIESGO"
+                                                                        ? "dashboardWinetEtiqueta dashboardWinetEstado--enRiesgo"
+                                                                        : actividad.estadoTiempo === "ATRASADO"
+                                                                            ? "dashboardWinetEtiqueta dashboardWinetEstado--atrasado"
+                                                                            : actividad.estadoTiempo === "FUERA DE TIEMPO"
+                                                                                ? "dashboardWinetEtiqueta dashboardWinetEstado--fueraTiempo"
+                                                                                : "dashboardWinetEtiqueta"
+                                                            }
+                                                        >
+                                                            {actividad.estadoTiempo}
+                                                        </span>
                                                     </td>
 
                                                     <td>
