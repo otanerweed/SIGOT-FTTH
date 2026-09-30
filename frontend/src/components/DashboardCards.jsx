@@ -1756,24 +1756,11 @@ function DashboardCards({
                                                     </td>
 
                                                     <td>
-                                                        {actividad.horaFin
-                                                            ? new Date(
-                                                                actividad.horaFin
-                                                            ).toLocaleTimeString(
-                                                                "es-PE",
-                                                                {
-                                                                    timeZone: "UTC",
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit"
-                                                                }
-                                                            )
-                                                            : "—"}
+                                                        {"—"}
                                                     </td>
 
                                                     <td>
-                                                        {formatearDuracion(
-                                                            actividad.duracionMinutos
-                                                        )}
+                                                        {"—"}
                                                     </td>
 
                                                     <td>

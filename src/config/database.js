@@ -33,7 +33,7 @@ const dbConfig = {
     database: process.env.DB_DATABASE,
     port: Number(process.env.DB_PORT),
 
-    connectionTimeout: 15000,
+    connectionTimeout: 60000,
     requestTimeout: 60000,
 
     options: {
@@ -103,18 +103,22 @@ async function conectarDB() {
         pool = null;
     }
 
-    /*
-     * Crear un pool independiente y explícito.
-     */
-    const nuevoPool =
-        new sql.ConnectionPool(
-            dbConfig
-        );
+    const maxIntentos = 3;
+    const esperaReintentoMs = 5000;
 
-    poolConnecting =
-        nuevoPool
-            .connect()
-            .then((conexion) => {
+    poolConnecting = (async () => {
+
+        for (let intento = 1; intento <= maxIntentos; intento++) {
+
+            const nuevoPool =
+                new sql.ConnectionPool(
+                    dbConfig
+                );
+
+            try {
+
+                const conexion =
+                    await nuevoPool.connect();
 
                 pool = conexion;
 
@@ -156,26 +160,68 @@ async function conectarDB() {
                 );
 
                 return pool;
-            })
-            .catch((error) => {
 
-                pool = null;
+            } catch (error) {
+
+                try {
+                    await nuevoPool.close();
+                } catch (errorCierre) {
+                    console.error(
+                        "⚠️ No se pudo cerrar el pool de conexión fallido:",
+                        errorCierre.message
+                    );
+                }
+
+                const erroresReintentables = [
+                    "ETIMEOUT",
+                    "ESOCKET",
+                    "ECONNRESET",
+                    "ECONNREFUSED",
+                    "ENOTOPEN"
+                ];
+
+                const puedeReintentar =
+                    erroresReintentables.includes(
+                        error?.code
+                    );
+
+                if (
+                    !puedeReintentar ||
+                    intento === maxIntentos
+                ) {
+
+                    pool = null;
+
+                    console.error(
+                        "❌ Error al conectar con SQL Server"
+                    );
+
+                    console.error(
+                        error.message
+                    );
+
+                    throw error;
+                }
 
                 console.error(
-                    "❌ Error al conectar con SQL Server"
+                    `⚠️ Conexión SQL fallida. Reintento ${intento}/${maxIntentos - 1} en ${esperaReintentoMs / 1000} segundos...`
                 );
 
-                console.error(
-                    error.message
+                await new Promise(
+                    (resolve) =>
+                        setTimeout(
+                            resolve,
+                            esperaReintentoMs
+                        )
                 );
+            }
+        }
 
-                throw error;
-            })
-            .finally(() => {
+    })().finally(() => {
 
-                poolConnecting = null;
+        poolConnecting = null;
 
-            });
+    });
 
     return poolConnecting;
 }
