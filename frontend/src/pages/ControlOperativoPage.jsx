@@ -4,7 +4,6 @@ import { obtenerToken } from "../services/authService";
 import { API_BASE_URL } from "../services/api";
 import "./ControlOperativoPage.css";
 import html2canvas from "html2canvas";
-import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 
 function formatearHora(valor) {
@@ -92,7 +91,6 @@ function ControlOperativoPage() {
     const [tecnicoJornada, setTecnicoJornada] = useState(null);
     const [horaCorreccion, setHoraCorreccion] = useState("");
     const [horaCierreCorreccion, setHoraCierreCorreccion] = useState("");
-    const [observacionCorreccion, setObservacionCorreccion] = useState("");
     const [observacionInicioSeleccionada, setObservacionInicioSeleccionada] = useState("");
     const [observacionCierreSeleccionada, setObservacionCierreSeleccionada] = useState("");
     const [observacionInicioTexto, setObservacionInicioTexto] = useState("");
@@ -559,8 +557,6 @@ function ControlOperativoPage() {
             setHoraCorreccion("");
             setHoraCierreCorreccion("");
 
-            setObservacionCorreccion("");
-
             setObservacionInicioSeleccionada("");
             setObservacionCierreSeleccionada("");
 
@@ -645,8 +641,8 @@ function ControlOperativoPage() {
 
     useEffect(() => {
         cargarControlRuta();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
         probarReporteSemanal();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fecha]);
 
     const [supervisorFiltro, setSupervisorFiltro] =
@@ -892,48 +888,6 @@ function ControlOperativoPage() {
         // =====================================
         // GENERAR IMAGEN DEL REPORTE SEMANAL
         // =====================================
-
-        async function generarImagenWhatsApp() {
-
-            if (!reporteImagenRef.current) {
-                alert("No se encontró la plantilla del reporte.");
-                return;
-            }
-
-            try {
-
-                const canvas = await html2canvas(
-                    reporteImagenRef.current,
-                    {
-                        backgroundColor: "#ffffff",
-                        scale: 2,
-                        useCORS: true
-                    }
-                );
-
-                const imagen = canvas.toDataURL("image/png");
-
-                const enlace = document.createElement("a");
-
-                enlace.href = imagen;
-
-                enlace.download =
-                    `Control_Ruta_${reporteSemanal?.fechaInicio || "reporte"}_${reporteSemanal?.fechaFin || ""}.png`;
-
-                enlace.click();
-
-            } catch (error) {
-
-                console.error(
-                    "Error al generar la imagen del reporte:",
-                    error
-                );
-
-                alert(
-                    "No se pudo generar la imagen del reporte."
-                );
-            }
-        }
 
 
         // =====================================
