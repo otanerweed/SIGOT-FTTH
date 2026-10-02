@@ -1578,6 +1578,14 @@ async function obtenerKPIs(
         let resumenWinetCelulas = [];
         let consolidadoOTWinet = [];
 
+        let ahoraWinet = {
+            fecha: null,
+            pendientes: 0,
+            enRuta: 0,
+            iniciadas: 0,
+            actividades: []
+        };
+
         if (proyecto === "RED_WINET") {
 
             /* =====================================================
@@ -1924,7 +1932,302 @@ async function obtenerKPIs(
 
             }
 
+             /*
+            * =====================================================
+            * AHORA — ACTIVIDADES OPERATIVAS DEL DÍA ACTUAL
+            * =====================================================
+            */
 
+            const fechaActualLima =
+                new Intl.DateTimeFormat(
+                    "en-CA",
+                    {
+                        timeZone: "America/Lima",
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit"
+                    }
+                ).format(
+                    new Date()
+                );
+
+            const solicitudAhoraWinet =
+                pool.request();
+
+            solicitudAhoraWinet.input(
+                "FechaAhoraWinet",
+                sql.Date,
+                fechaActualLima
+            );
+
+            solicitudAhoraWinet.input(
+                "DistritoAhoraWinet",
+                sql.VarChar(60),
+                distrito || null
+            );
+
+            const resultadoAhoraWinet =
+                await solicitudAhoraWinet.query(`
+                    SELECT
+                        A.IdActividad,
+                        A.IdActividadOFSC,
+                        A.IdOrden,
+                        OT.CodigoOT,
+                        A.EstadoActividad,
+                        A.ResultadoNoRealizado,
+                        A.RazonReagenda,
+                        A.Motivo,
+                        A.FechaActividad,
+                        A.HoraInicio,
+                        A.HoraFin,
+                        A.TipoCierre,
+                        A.ResultadoGlobal,
+                        A.ResponsableSuspension,
+                        A.TipoSuspension,
+                        A.Recurso,
+                        OT.Distrito
+
+                    FROM dbo.ActividadesOFSC A
+
+                    INNER JOIN dbo.OrdenesTrabajo OT
+                        ON OT.IdOrden =
+                            A.IdOrden
+
+                    INNER JOIN dbo.Proyectos P
+                        ON P.IdProyecto =
+                            OT.IdProyecto
+
+                    WHERE
+                        P.Codigo = 'RED_WINET'
+
+                        AND A.Recurso IS NOT NULL
+
+                        AND LTRIM(
+                            RTRIM(
+                                A.Recurso
+                            )
+                        ) <> ''
+
+                        AND UPPER(
+                            LTRIM(
+                                RTRIM(
+                                    A.EstadoActividad
+                                )
+                            )
+                        ) IN (
+                            'PENDIENTE',
+                            'EN_RUTA',
+                            'INICIADA'
+                        )
+
+                        AND CAST(
+                            A.FechaActividad
+                            AS DATE
+                        ) =
+                            @FechaAhoraWinet
+
+                        AND (
+                            @DistritoAhoraWinet IS NULL
+
+                            OR UPPER(
+                                LTRIM(
+                                    RTRIM(
+                                        COALESCE(
+                                            OT.Distrito,
+                                            ''
+                                        )
+                                    )
+                                )
+                            ) =
+                                UPPER(
+                                    LTRIM(
+                                        RTRIM(
+                                            @DistritoAhoraWinet
+                                        )
+                                    )
+                                )
+                        );
+                `);
+
+            const actividadesAhoraCrudas =
+                resultadoAhoraWinet.recordset;
+
+            const actividadesAhoraMapeadas =
+                actividadesAhoraCrudas
+                    .map(
+                        (actividad) => {
+
+                            const tecnico =
+                                mapaRecursos.get(
+                                    actividad.Recurso
+                                );
+
+                            if (
+                                !tecnico ||
+                                !tecnico.IdTecnico
+                            ) {
+                                return null;
+                            }
+
+                            const fechaActividad =
+                                new Date(
+                                    actividad.FechaActividad
+                                );
+
+                            const asignacionesTecnico =
+                                asignacionesPorTecnico.get(
+                                    tecnico.IdTecnico
+                                ) || [];
+
+                            const asignacionVigente =
+                                asignacionesTecnico.find(
+                                    (asignacion) => {
+
+                                        const fechaInicio =
+                                            asignacion.FechaInicio
+                                                ? new Date(
+                                                    asignacion.FechaInicio
+                                                )
+                                                : null;
+
+                                        const fechaFin =
+                                            asignacion.FechaFin
+                                                ? new Date(
+                                                    asignacion.FechaFin
+                                                )
+                                                : null;
+
+                                        return (
+                                            fechaInicio &&
+                                            fechaInicio <=
+                                                fechaActividad &&
+                                            (
+                                                !fechaFin ||
+                                                fechaFin >=
+                                                    fechaActividad
+                                            )
+                                        );
+                                    }
+                                ) || null;
+
+                            return {
+                                idActividad:
+                                    actividad.IdActividad,
+
+                                idActividadOFSC:
+                                    actividad.IdActividadOFSC,
+
+                                idOrden:
+                                    actividad.IdOrden,
+
+                                codigoOT:
+                                    actividad.CodigoOT,
+
+                                estado:
+                                    actividad.EstadoActividad,
+
+                                resultadoNoRealizado:
+                                    actividad.ResultadoNoRealizado,
+
+                                razonReagenda:
+                                    actividad.RazonReagenda,
+
+                                motivo:
+                                    actividad.Motivo,
+
+                                resultadoGlobal:
+                                    actividad.ResultadoGlobal,
+
+                                responsableSuspension:
+                                    actividad.ResponsableSuspension,
+
+                                tipoSuspension:
+                                    actividad.TipoSuspension,
+
+                                fechaActividad:
+                                    actividad.FechaActividad,
+
+                                horaInicio:
+                                    actividad.HoraInicio,
+
+                                horaFin:
+                                    actividad.HoraFin,
+
+                                tipoCierre:
+                                    actividad.TipoCierre,
+
+                                recurso:
+                                    actividad.Recurso,
+
+                                distrito:
+                                    actividad.Distrito,
+
+                                idTecnico:
+                                    tecnico.IdTecnico,
+
+                                et:
+                                    tecnico.NombreCompleto,
+
+                                idCelula:
+                                    asignacionVigente?.IdCelula ??
+                                    null,
+
+                                celula:
+                                    asignacionVigente?.Celula ??
+                                    null,
+
+                                idSupervisor:
+                                    asignacionVigente?.IdSupervisor ??
+                                    null,
+
+                                supervisor:
+                                    asignacionVigente?.Supervisor ??
+                                    null
+                            };
+                        }
+                    )
+                    .filter(Boolean);
+
+            ahoraWinet = {
+                fecha:
+                    fechaActualLima,
+
+                pendientes:
+                    actividadesAhoraMapeadas.filter(
+                        (actividad) =>
+                            String(
+                                actividad.estado || ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            "PENDIENTE"
+                    ).length,
+
+                enRuta:
+                    actividadesAhoraMapeadas.filter(
+                        (actividad) =>
+                            String(
+                                actividad.estado || ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            "EN_RUTA"
+                    ).length,
+
+                iniciadas:
+                    actividadesAhoraMapeadas.filter(
+                        (actividad) =>
+                            String(
+                                actividad.estado || ""
+                            )
+                                .trim()
+                                .toUpperCase() ===
+                            "INICIADA"
+                    ).length,
+
+                actividades:
+                    actividadesAhoraMapeadas
+            };
             /*
             * =====================================================
             * 5. CONSTRUIR DETALLE POR ET
@@ -2084,8 +2387,8 @@ async function obtenerKPIs(
                         .toUpperCase();
 
                 if (
-                    estado !==
-                    "SUSPENDIDA"
+                    estado === "FINALIZADA" ||
+                    estado === "NO_REALIZADO"
                 ) {
                     item.asignadas += 1;
                 }
@@ -2909,7 +3212,10 @@ async function obtenerKPIs(
                     consolidadoOTWinet,
 
                 resumenWinetCelulas:
-                    resumenWinetCelulas
+                    resumenWinetCelulas,
+
+                ahoraWinet:
+                    ahoraWinet
                             });
 
     } catch (error) {
@@ -2932,7 +3238,472 @@ async function obtenerKPIs(
             });
     }
 }
+
+/**
+ * Consulta rápida de una OT WINET.
+ *
+ * GET /api/dashboard/ot?codigoOT=XXXXXXXXX
+ */
+async function buscarOT(
+    req,
+    res
+) {
+    try {
+
+        const codigoOT =
+            String(
+                req.query.codigoOT || ""
+            )
+                .trim();
+
+        if (!codigoOT) {
+            return res
+                .status(400)
+                .json({
+                    ok: false,
+                    mensaje:
+                        "Debe indicar el código de la OT."
+                });
+        }
+
+        console.log(
+            "========== CONSULTA RÁPIDA OT =========="
+        );
+
+        console.log(
+            ">>> OT solicitada:",
+            codigoOT
+        );
+
+        const pool =
+            await conectarDB();
+
+        /*
+         * =====================================================
+         * 1. OBTENER ACTIVIDADES DE LA OT
+         * =====================================================
+         */
+
+        const solicitud =
+            pool.request();
+
+        solicitud.input(
+            "CodigoOT",
+            sql.VarChar(50),
+            codigoOT
+        );
+
+        const resultado =
+            await solicitud.query(`
+                SELECT
+                    A.IdActividad,
+                    A.IdActividadOFSC,
+                    A.IdOrden,
+                    OT.CodigoOT,
+
+                    A.EstadoActividad,
+                    A.ResultadoNoRealizado,
+                    A.RazonReagenda,
+                    A.Motivo,
+
+                    A.FechaActividad,
+                    A.HoraInicio,
+                    A.HoraFin,
+
+                    A.TipoCierre,
+                    A.ResultadoGlobal,
+
+                    A.ResponsableSuspension,
+                    A.TipoSuspension,
+
+                    A.Recurso,
+
+                    OT.Distrito
+
+                FROM dbo.ActividadesOFSC A
+
+                INNER JOIN dbo.OrdenesTrabajo OT
+                    ON OT.IdOrden =
+                        A.IdOrden
+
+                INNER JOIN dbo.Proyectos P
+                    ON P.IdProyecto =
+                        OT.IdProyecto
+
+                WHERE
+                    P.Codigo = 'RED_WINET'
+
+                    AND UPPER(
+                        LTRIM(
+                            RTRIM(
+                                OT.CodigoOT
+                            )
+                        )
+                    ) =
+                    UPPER(
+                        LTRIM(
+                            RTRIM(
+                                @CodigoOT
+                            )
+                        )
+                    )
+
+                ORDER BY
+                    A.FechaActividad,
+                    A.HoraInicio;
+            `);
+
+        const actividades =
+            resultado.recordset;
+
+        if (
+            actividades.length === 0
+        ) {
+
+            return res
+                .status(404)
+                .json({
+                    ok: false,
+                    mensaje:
+                        `No se encontró la OT ${codigoOT} en RED WINET.`
+                });
+
+        }
+
+        /*
+         * =====================================================
+         * 2. TÉCNICOS ACTIVOS
+         * =====================================================
+         */
+
+        const resultadoTecnicos =
+            await pool
+                .request()
+                .query(`
+                    SELECT
+                        IdTecnico,
+                        NombreCompleto
+
+                    FROM dbo.Tecnicos
+
+                    WHERE Activo = 1
+
+                    ORDER BY
+                        IdTecnico;
+                `);
+
+        const tecnicos =
+            resultadoTecnicos.recordset;
+
+        /*
+         * =====================================================
+         * 3. NORMALIZACIÓN DE RECURSO / ET
+         * =====================================================
+         */
+
+        const normalizarTexto =
+            (valor) =>
+                String(valor || "")
+                    .trim()
+                    .toUpperCase()
+                    .normalize("NFD")
+                    .replace(
+                        /[\u0300-\u036f]/g,
+                        ""
+                    )
+                    .replace(
+                        /HOME_/g,
+                        ""
+                    )
+                    .replace(
+                        /_/g,
+                        " "
+                    )
+                    .replace(
+                        /\s+/g,
+                        " "
+                    )
+                    .trim();
+
+        /*
+         * =====================================================
+         * 4. ASIGNACIONES DE CÉLULA
+         * =====================================================
+         */
+
+        const resultadoAsignaciones =
+            await pool
+                .request()
+                .query(`
+                    SELECT
+                        ACE.IdTecnico,
+                        ACE.IdCelula,
+                        ACE.FechaInicio,
+                        ACE.FechaFin,
+
+                        C.NombreCelula
+                            AS Celula,
+
+                        C.IdSupervisor,
+
+                        S.NombreCompleto
+                            AS Supervisor
+
+                    FROM dbo.AsignacionesCelulaET ACE
+
+                    LEFT JOIN dbo.Celulas C
+                        ON C.IdCelula =
+                            ACE.IdCelula
+
+                    LEFT JOIN dbo.SupervisoresOperativos S
+                        ON S.IdSupervisor =
+                            C.IdSupervisor
+
+                    WHERE
+                        ACE.Activo = 1
+
+                    ORDER BY
+                        ACE.IdTecnico,
+                        ACE.FechaInicio DESC;
+                `);
+
+        const asignaciones =
+            resultadoAsignaciones.recordset;
+
+        /*
+         * =====================================================
+         * 5. MAPEAR ET + CÉLULA + SUPERVISOR
+         * =====================================================
+         */
+
+        const actividadesNormalizadas =
+            actividades.map(
+                (actividad) => {
+
+                    const recursoNormalizado =
+                        normalizarTexto(
+                            actividad.Recurso
+                        );
+
+                    const textoRecurso =
+                        ` ${recursoNormalizado} `;
+
+                    const tecnicoEncontrado =
+                        tecnicos.find(
+                            (tecnico) => {
+
+                                const palabrasTecnico =
+                                    normalizarTexto(
+                                        tecnico.NombreCompleto
+                                    )
+                                        .split(" ")
+                                        .filter(
+                                            Boolean
+                                        );
+
+                                return palabrasTecnico.every(
+                                    (palabra) =>
+                                        textoRecurso.includes(
+                                            ` ${palabra} `
+                                        )
+                                );
+                            }
+                        );
+
+                    const fechaActividad =
+                        actividad.FechaActividad
+                            ? new Date(
+                                actividad.FechaActividad
+                            )
+                            : null;
+
+                    const asignacionVigente =
+                        tecnicoEncontrado
+                            ? (
+                                asignaciones.find(
+                                    (asignacion) => {
+
+                                        if (
+                                            asignacion.IdTecnico !==
+                                            tecnicoEncontrado.IdTecnico
+                                        ) {
+                                            return false;
+                                        }
+
+                                        const fechaInicio =
+                                            asignacion.FechaInicio
+                                                ? new Date(
+                                                    asignacion.FechaInicio
+                                                )
+                                                : null;
+
+                                        const fechaFin =
+                                            asignacion.FechaFin
+                                                ? new Date(
+                                                    asignacion.FechaFin
+                                                )
+                                                : null;
+
+                                        return (
+                                            fechaActividad &&
+                                            fechaInicio &&
+                                            fechaInicio <=
+                                                fechaActividad &&
+                                            (
+                                                !fechaFin ||
+                                                fechaFin >=
+                                                    fechaActividad
+                                            )
+                                        );
+                                    }
+                                ) || null
+                            )
+                            : null;
+
+                    return {
+                        idActividad:
+                            actividad.IdActividad,
+
+                        idActividadOFSC:
+                            actividad.IdActividadOFSC,
+
+                        idOrden:
+                            actividad.IdOrden,
+
+                        codigoOT:
+                            actividad.CodigoOT,
+
+                        estado:
+                            actividad.EstadoActividad,
+
+                        resultadoNoRealizado:
+                            actividad.ResultadoNoRealizado,
+
+                        razonReagenda:
+                            actividad.RazonReagenda,
+
+                        motivo:
+                            actividad.Motivo,
+
+                        resultadoGlobal:
+                            actividad.ResultadoGlobal,
+
+                        responsableSuspension:
+                            actividad.ResponsableSuspension,
+
+                        tipoSuspension:
+                            actividad.TipoSuspension,
+
+                        fechaActividad:
+                            actividad.FechaActividad,
+
+                        horaInicio:
+                            actividad.HoraInicio,
+
+                        horaFin:
+                            actividad.HoraFin,
+
+                        tipoCierre:
+                            actividad.TipoCierre,
+
+                        recurso:
+                            actividad.Recurso,
+
+                        distrito:
+                            actividad.Distrito,
+
+                        idTecnico:
+                            tecnicoEncontrado
+                                ?.IdTecnico ??
+                            null,
+
+                        et:
+                            tecnicoEncontrado
+                                ?.NombreCompleto ??
+                            null,
+
+                        idCelula:
+                            asignacionVigente
+                                ?.IdCelula ??
+                            null,
+
+                        celula:
+                            asignacionVigente
+                                ?.Celula ??
+                            null,
+
+                        idSupervisor:
+                            asignacionVigente
+                                ?.IdSupervisor ??
+                            null,
+
+                        supervisor:
+                            asignacionVigente
+                                ?.Supervisor ??
+                            null
+                    };
+                }
+            );
+
+        /*
+         * =====================================================
+         * 6. CONSTRUIR OT CONSOLIDADA
+         * =====================================================
+         */
+
+        const ots =
+            construirConsolidadoOT(
+                actividadesNormalizadas
+            );
+
+        const ot =
+            ots.find(
+                (item) =>
+                    String(
+                        item.codigoOT || ""
+                    ).trim().toUpperCase() ===
+                    codigoOT.trim().toUpperCase()
+            );
+
+        if (!ot) {
+            return res
+                .status(404)
+                .json({
+                    ok: false,
+                    mensaje:
+                        `No se pudo construir la trazabilidad de la OT ${codigoOT}.`
+                });
+        }
+
+        return res
+            .status(200)
+            .json({
+                ok: true,
+                ot
+            });
+
+    } catch (error) {
+
+        console.error(
+            "Error al consultar OT:",
+            error
+        );
+
+        return res
+            .status(500)
+            .json({
+                ok: false,
+
+                mensaje:
+                    "No se pudo consultar la OT.",
+
+                detalle:
+                    error.message
+            });
+    }
+}
 module.exports = {
     obtenerResumen,
-    obtenerKPIs
+    obtenerKPIs,
+    buscarOT
 };

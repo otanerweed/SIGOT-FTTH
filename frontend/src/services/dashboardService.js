@@ -17,3 +17,20 @@ export const obtenerKPIs = async (
 
     return respuesta.data;
 };
+
+export const buscarOT = async (
+    codigoOT,
+    config = {}
+) => {
+    const respuesta = await api.get(
+        "/dashboard/ot",
+        {
+            params: {
+                codigoOT
+            },
+            ...config
+        }
+    );
+
+    return respuesta.data;
+};

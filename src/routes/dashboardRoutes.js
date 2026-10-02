@@ -25,6 +25,18 @@ router.get(
     dashboardController.obtenerResumen
 );
 
+// CONSULTA RÁPIDA DE UNA OT
+router.get(
+    "/ot",
+    autorizarRoles(
+        "Administrador",
+        "Coordinador",
+        "Supervisor",
+        "Consulta",
+        "Jefe"
+    ),
+    dashboardController.buscarOT
+);
 // KPIs OPERATIVOS DE ACTIVIDADES OFSC
 router.get(
     "/kpis",

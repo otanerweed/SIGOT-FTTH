@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
+import { buscarOT } from "../services/dashboardService";
 
 function DashboardCards({
     dashboard,
@@ -27,6 +28,18 @@ function DashboardCards({
     const consolidadoOTWinet =
         kpis?.consolidadoOTWinet || [];
 
+    const ahoraWinet =
+        kpis?.ahoraWinet || {
+            fecha: null,
+            pendientes: 0,
+            enRuta: 0,
+            iniciadas: 0,
+            actividades: []
+        };
+
+    const historicoEfectividad =
+        kpis?.historicoEfectividad || [];
+
     
     
     const [celulaSeleccionada, setCelulaSeleccionada] =
@@ -53,6 +66,21 @@ function DashboardCards({
     const [ordenEspecialistas, setOrdenEspecialistas] =
         useState(null);
 
+    const [codigoOTBusqueda, setCodigoOTBusqueda] =
+        useState("");
+
+    const [otConsulta, setOtConsulta] =
+        useState(null);
+
+    const [cargandoOT, setCargandoOT] =
+        useState(false);
+
+    const [errorOT, setErrorOT] =
+        useState("");
+
+    const [busquedaEspecialista, setBusquedaEspecialista] =
+        useState("");
+
     const [horaActual, setHoraActual] =
         useState(new Date());
 
@@ -63,6 +91,28 @@ function DashboardCards({
 
         return () => clearInterval(intervalo);
     }, []);
+
+    const aplicarFiltrosRef =
+    useRef(aplicarFiltros);
+
+useEffect(() => {
+    aplicarFiltrosRef.current =
+        aplicarFiltros;
+}, [aplicarFiltros]);
+
+useEffect(() => {
+    const intervalo =
+        setInterval(() => {
+
+            if (!cargandoKPI) {
+                aplicarFiltrosRef.current();
+            }
+
+        }, 60000);
+
+    return () =>
+        clearInterval(intervalo);
+}, [cargandoKPI]);
 
     useEffect(() => {
         setEventoOperativoSeleccionado(null);
@@ -76,7 +126,22 @@ function DashboardCards({
                     celulaSeleccionada === null ||
                     String(item.idCelula) ===
                     String(celulaSeleccionada)
-            );
+            )
+            .filter((item) => {
+
+                const textoBusqueda =
+                    busquedaEspecialista
+                        .trim()
+                        .toLowerCase();
+
+                if (!textoBusqueda) {
+                    return true;
+                }
+
+                return String(item.et || "")
+                    .toLowerCase()
+                    .includes(textoBusqueda);
+            });
 
     const detalleWinetOrdenado =
         [...detalleWinetFiltrado].sort(
@@ -697,6 +762,84 @@ function DashboardCards({
                             };
                         })
             );
+
+        const actividadesAhoraIniciadas =
+            (ahoraWinet.actividades || [])
+                .filter(
+                    (actividad) =>
+                        String(
+                            actividad.estado || ""
+                        )
+                            .trim()
+                            .toUpperCase() ===
+                        "INICIADA"
+                )
+                .map((actividad) => {
+
+                    const fechaInicio =
+                        actividad.fechaActividad &&
+                        actividad.horaInicio
+                            ? new Date(
+                                `${new Date(
+                                    actividad.fechaActividad
+                                ).toISOString().slice(0, 10)}T${new Date(
+                                    actividad.horaInicio
+                                ).toISOString().slice(11, 19)}`
+                            )
+                            : null;
+
+                    const inicioValido =
+                        fechaInicio &&
+                        !Number.isNaN(
+                            fechaInicio.getTime()
+                        );
+
+                    const tiempoTranscurridoMinutos =
+                        inicioValido
+                            ? Math.max(
+                                0,
+                                Math.floor(
+                                    (
+                                        horaActual.getTime() -
+                                        fechaInicio.getTime()
+                                    ) / 60000
+                                )
+                            )
+                            : null;
+
+                    let estadoTiempo =
+                        "SIN HORA";
+
+                    if (
+                        tiempoTranscurridoMinutos !== null
+                    ) {
+                        if (
+                            tiempoTranscurridoMinutos < 120
+                        ) {
+                            estadoTiempo =
+                                "A TIEMPO";
+                        } else if (
+                            tiempoTranscurridoMinutos < 180
+                        ) {
+                            estadoTiempo =
+                                "EN RIESGO";
+                        } else if (
+                            tiempoTranscurridoMinutos < 210
+                        ) {
+                            estadoTiempo =
+                                "ATRASADO";
+                        } else {
+                            estadoTiempo =
+                                "FUERA DE TIEMPO";
+                        }
+                    }
+
+                    return {
+                        ...actividad,
+                        tiempoTranscurridoMinutos,
+                        estadoTiempo
+                    };
+                });
     const consolidadoOTETSeleccionado =
         consolidadoOTWinet.filter(
             (ot) =>
@@ -748,10 +891,20 @@ function DashboardCards({
     const otDetalleSeleccionada =
         otSeleccionada === null
             ? null
-            : consolidadoOTWinet.find(
-                (ot) =>
-                    String(ot.idOrden) ===
+            : (
+                consolidadoOTETSeleccionado.find(
+                    (ot) =>
+                        String(ot.idOrden) ===
+                        String(otSeleccionada)
+                )
+                ||
+                (
+                    otConsulta &&
+                    String(otConsulta.idOrden) ===
                     String(otSeleccionada)
+                        ? otConsulta
+                        : null
+                )
             );
 
     const formatearDuracion =
@@ -900,106 +1053,94 @@ function DashboardCards({
         <section className="dashboardResumen">
 
             {/* =====================================
-                KPIs DE ACTIVIDADES OFSC
+                RESUMEN SUPERIOR
             ===================================== */}
 
-            <div className="dashboardKPIHeader">
+            <div className="dashboardSuperior">
 
-                <div className="dashboardKPIHeaderTitulo">
-                    <span>
-                        Indicadores de actividades OFSC
-                    </span>
+                {/* ENCABEZADO + FILTROS */}
+                <div className="dashboardSuperiorEncabezado">
 
-                    <p>
-                        Métricas operativas de RED WINET según fecha y distrito.
-                    </p>
-                </div>
+                    <div className="dashboardSuperiorTitulo">
+                        <span className="dashboardEyebrow">
+                            DASHBOARD OPERATIVO
+                        </span>
 
-                <div className="dashboardKPIFiltros">
+                        <h2>
+                            RED WINET
+                        </h2>
 
-                    <div className="dashboardKPIFiltro">
+                        <p>
+                            Monitoreo operativo según el período y distrito seleccionados.
+                        </p>
+                    </div>
 
-                        <label htmlFor="filtro-fecha-desde-kpi">
-                            Desde
-                        </label>
+                    <div className="dashboardKPIFiltros">
 
-                        <input
-                            id="filtro-fecha-desde-kpi"
-                            type="date"
-                            value={
-                                fechaDesde
-                            }
-                            onChange={
-                                (evento) =>
+                        <div className="dashboardKPIFiltro">
+                            <label htmlFor="filtro-fecha-desde-kpi">
+                                Desde
+                            </label>
+
+                            <input
+                                id="filtro-fecha-desde-kpi"
+                                type="date"
+                                value={fechaDesde}
+                                onChange={(evento) =>
                                     setFechaDesde(
                                         evento.target.value
                                     )
-                            }
-                        />
+                                }
+                            />
+                        </div>
 
-                    </div>
+                        <div className="dashboardKPIFiltro">
+                            <label htmlFor="filtro-fecha-hasta-kpi">
+                                Hasta
+                            </label>
 
-
-                    <div className="dashboardKPIFiltro">
-
-                        <label htmlFor="filtro-fecha-hasta-kpi">
-                            Hasta
-                        </label>
-
-                        <input
-                            id="filtro-fecha-hasta-kpi"
-                            type="date"
-                            value={
-                                fechaHasta
-                            }
-                            onChange={
-                                (evento) =>
+                            <input
+                                id="filtro-fecha-hasta-kpi"
+                                type="date"
+                                value={fechaHasta}
+                                onChange={(evento) =>
                                     setFechaHasta(
                                         evento.target.value
                                     )
-                            }
-                        />
+                                }
+                            />
+                        </div>
 
-                    </div>
+                        <div className="dashboardKPIFiltro">
+                            <label htmlFor="filtro-distrito-kpi">
+                                Distrito
+                            </label>
 
-
-                    <div className="dashboardKPIFiltro">
-
-                        <label htmlFor="filtro-distrito-kpi">
-                            Distrito
-                        </label>
-
-                        <select
-                            id="filtro-distrito-kpi"
-                            value={
-                                distritoSeleccionado
-                            }
-                            onChange={
-                                (evento) =>
+                            <select
+                                id="filtro-distrito-kpi"
+                                value={distritoSeleccionado}
+                                onChange={(evento) =>
                                     setDistritoSeleccionado(
                                         evento.target.value
                                     )
-                            }
-                        >
-                            <option value="TODOS">
-                                Todos
-                            </option>
+                                }
+                            >
+                                <option value="TODOS">
+                                    Todos
+                                </option>
 
-                            {(
-                                kpis?.distritos || []
-                            ).map(
-                                (distrito) => (
-                                    <option
-                                        key={distrito}
-                                        value={distrito}
-                                    >
-                                        {distrito}
-                                    </option>
-                                )
-                            )}
-                        </select>
-
-                    </div>
+                                {(kpis?.distritos || []).map(
+                                    (distrito) => (
+                                        <option
+                                            key={distrito}
+                                            value={distrito}
+                                        >
+                                            {distrito}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
 
                         <button
                             type="button"
@@ -1012,144 +1153,756 @@ function DashboardCards({
                                 : "Aplicar filtros"}
                         </button>
 
+                    </div>
+
                 </div>
 
-            </div>
-
-            {(
-                filtrosAplicados.fechaDesde ||
-                filtrosAplicados.fechaHasta ||
-                filtrosAplicados.distrito
-            ) && (
-                <div className="dashboardPeriodoAplicado">
-                    <strong>Período aplicado:</strong>{" "}
-                    {filtrosAplicados.fechaDesde
-                        ? `${filtrosAplicados.fechaDesde.slice(8, 10)}/${filtrosAplicados.fechaDesde.slice(5, 7)}/${filtrosAplicados.fechaDesde.slice(0, 4)}`
-                        : "Sin fecha inicial"}
-                    {" – "}
-                    {filtrosAplicados.fechaHasta
-                        ? `${filtrosAplicados.fechaHasta.slice(8, 10)}/${filtrosAplicados.fechaHasta.slice(5, 7)}/${filtrosAplicados.fechaHasta.slice(0, 4)}`
-                        : "Sin fecha final"}
-                    {" · "}
-                    Distrito:{" "}
-                    {filtrosAplicados.distrito || "Todos"}
-                </div>
-            )}
-
-
-
-            <div className="dashboardCards dashboardCardsKPI">
-
-                <article className="dashboardCard dashboardCard--info">
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Total actividades
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.totalActividades ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Finalizadas + no realizadas
-                    </span>
-                </article>
-
-                <article className="dashboardCard dashboardCard--success">
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Finalizadas
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.finalizadas ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Actividades finalizadas
-                    </span>
-                </article>
-
-                <article className="dashboardCard dashboardCard--danger">
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            No realizadas
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.noRealizados ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Reprogramadas: {datosKPI.reprogramadas ?? 0}
+                {/* PERÍODO APLICADO */}
+                {(filtrosAplicados.fechaDesde ||
+                    filtrosAplicados.fechaHasta ||
+                    filtrosAplicados.distrito) && (
+                    <div className="dashboardPeriodoAplicado">
+                        <strong>Período:</strong>{" "}
+                        {filtrosAplicados.fechaDesde
+                            ? `${filtrosAplicados.fechaDesde.slice(8, 10)}/${filtrosAplicados.fechaDesde.slice(5, 7)}/${filtrosAplicados.fechaDesde.slice(0, 4)}`
+                            : "Sin fecha inicial"}
+                        {" – "}
+                        {filtrosAplicados.fechaHasta
+                            ? `${filtrosAplicados.fechaHasta.slice(8, 10)}/${filtrosAplicados.fechaHasta.slice(5, 7)}/${filtrosAplicados.fechaHasta.slice(0, 4)}`
+                            : "Sin fecha final"}
                         {" · "}
-                        Cierres automáticos: {datosKPI.cierresAutomaticos ?? 0}
-                    </span>
-                </article>
-
-                <article className="dashboardCard dashboardCard--success">
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Efectividad
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
+                        Distrito:{" "}
+                        {filtrosAplicados.distrito || "Todos"}
                     </div>
+                )}
+                {/* =====================================
+                    CONSULTA RÁPIDA DE OT
+                    ===================================== */}
 
-                    <div className="dashboardCardValor">
-                        {datosKPI.efectividad ?? 0}%
-                    </div>
+                    <section className="dashboardWinetConsultaOT">
 
-                    <span className="dashboardCardDetalle">
-                        Finalizadas / actividades válidas
-                    </span>
-                </article>
+                        <div className="dashboardSeccionTitulo">
+                            <div>
+                                <h2>
+                                    Consulta rápida de OT
+                                </h2>
 
-                <article className="dashboardCard dashboardCard--neutral">
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Tiempo promedio por OT finalizada
-                        </span>
+                                <p>
+                                    Busca una OT de RED WINET y consulta su trazabilidad.
+                                </p>
+                            </div>
+                        </div>
 
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
+                        <div
+                            style={{
+                                display: "flex",
+                                gap: "10px",
+                                alignItems: "center",
+                                flexWrap: "wrap"
+                            }}
+                        >
 
-                    <div className="dashboardCardValor">
-                        {formatearDuracion(
-                            datosKPI.promedioDuracionMinutos
+                            <input
+                                type="text"
+                                value={codigoOTBusqueda}
+                                onChange={(e) =>
+                                    setCodigoOTBusqueda(
+                                        e.target.value
+                                    )
+                                }
+                                onKeyDown={async (e) => {
+
+                                    if (
+                                        e.key !== "Enter" ||
+                                        cargandoOT
+                                    ) {
+                                        return;
+                                    }
+
+                                    const codigo =
+                                        codigoOTBusqueda.trim();
+
+                                    if (!codigo) {
+                                        setErrorOT(
+                                            "Ingresa un código de OT."
+                                        );
+                                        setOtConsulta(null);
+                                        return;
+                                    }
+
+                                    setCargandoOT(true);
+                                    setErrorOT("");
+                                    setOtConsulta(null);
+
+                                    try {
+
+                                        const respuesta =
+                                            await buscarOT(codigo);
+
+                                        if (
+                                            !respuesta?.ok ||
+                                            !respuesta?.ot
+                                        ) {
+                                            throw new Error(
+                                                respuesta?.mensaje ||
+                                                "No se pudo consultar la OT."
+                                            );
+                                        }
+
+                                        setOtConsulta(
+                                            respuesta.ot
+                                        );
+
+                                    } catch (error) {
+
+                                        setErrorOT(
+                                            error?.response?.data?.mensaje ||
+                                            error?.message ||
+                                            "No se pudo consultar la OT."
+                                        );
+
+                                    } finally {
+
+                                        setCargandoOT(false);
+
+                                    }
+
+                                }}
+                                placeholder="Ej. 926665746"
+                                style={{
+                                    minWidth: "260px",
+                                    padding: "10px 12px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "8px",
+                                    fontSize: "14px"
+                                }}
+                            />
+
+                            <button
+                                type="button"
+                                disabled={cargandoOT}
+                                onClick={async () => {
+
+                                    const codigo =
+                                        codigoOTBusqueda.trim();
+
+                                    if (!codigo) {
+                                        setErrorOT(
+                                            "Ingresa un código de OT."
+                                        );
+                                        setOtConsulta(null);
+                                        return;
+                                    }
+
+                                    setCargandoOT(true);
+                                    setErrorOT("");
+                                    setOtConsulta(null);
+
+                                    try {
+
+                                        const respuesta =
+                                            await buscarOT(codigo);
+
+                                        if (
+                                            !respuesta?.ok ||
+                                            !respuesta?.ot
+                                        ) {
+                                            throw new Error(
+                                                respuesta?.mensaje ||
+                                                "No se pudo consultar la OT."
+                                            );
+                                        }
+
+                                        setOtConsulta(
+                                            respuesta.ot
+                                        );
+
+                                    } catch (error) {
+
+                                        setErrorOT(
+                                            error?.response?.data?.mensaje ||
+                                            error?.message ||
+                                            "No se pudo consultar la OT."
+                                        );
+
+                                    } finally {
+
+                                        setCargandoOT(false);
+
+                                    }
+
+                                }}
+                                style={{
+                                    padding: "10px 16px",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    cursor: cargandoOT
+                                        ? "not-allowed"
+                                        : "pointer",
+                                    fontWeight: "600"
+                                }}
+                            >
+                                {cargandoOT
+                                    ? "Buscando..."
+                                    : "Buscar OT"}
+                            </button>
+
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setCodigoOTBusqueda("");
+                                    setOtConsulta(null);
+                                    setErrorOT("");
+                                }}
+                                style={{
+                                    padding: "10px 14px",
+                                    border: "1px solid #cbd5e1",
+                                    borderRadius: "8px",
+                                    background: "#ffffff",
+                                    color: "#475569",
+                                    cursor: "pointer",
+                                    fontWeight: "600"
+                                }}
+                            >
+                                Limpiar
+                            </button>
+
+                        </div>
+
+                        {errorOT && (
+                            <div
+                                style={{
+                                    marginTop: "10px",
+                                    color: "#b91c1c"
+                                }}
+                            >
+                                {errorOT}
+                            </div>
+                        )}
+
+                        {otConsulta && (
+                            <div
+                                style={{
+                                    marginTop: "10px",
+                                    padding: "10px",
+                                    border: "1px solid #e2e8f0",
+                                    borderRadius: "10px",
+                                    background: "#f8fafc"
+                                }}
+                            >
+
+                                <strong>
+                                    OT {otConsulta.codigoOT}
+                                </strong>
+
+                                <div
+                                    style={{
+                                        marginTop: "8px",
+                                        display: "grid",
+                                        gridTemplateColumns:
+                                            "repeat(4, minmax(180px, 1fr))",
+                                        gap: "8px"
+                                    }}
+                                >
+
+                                    <span>
+                                        ET:{" "}
+                                        {otConsulta.et || "—"}
+                                    </span>
+
+                                    <span>
+                                        Célula:{" "}
+                                        {otConsulta.celula || "—"}
+                                    </span>
+
+                                    <span>
+                                        Supervisor:{" "}
+                                        {otConsulta.supervisor || "—"}
+                                    </span>
+
+                                    <span>
+                                        Distrito:{" "}
+                                        {otConsulta.distrito || "—"}
+                                    </span>
+
+                                    <span>
+                                        Estado:{" "}
+                                        <span
+                                            className={
+                                                otConsulta.estadoActual === "FINALIZADA"
+                                                    ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--finalizada"
+                                                    : otConsulta.estadoActual === "INICIADA"
+                                                        ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--iniciada"
+                                                        : otConsulta.estadoActual === "NO_REALIZADO"
+                                                            ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--noRealizado"
+                                                            : otConsulta.estadoActual === "SUSPENDIDA"
+                                                                ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--suspendida"
+                                                                : "dashboardWinetEtiqueta"
+                                            }
+                                        >
+                                                {formatearEstadoVisible(
+                                                    otConsulta.estadoActual
+                                                )}
+                                        </span>
+
+                                        <span>
+                                            Resultado:{" "}
+                                            <span
+                                                className={
+                                                    otConsulta.resultadoCierreActual === "REPROGRAMADA"
+                                                        ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--reprogramada"
+                                                        : otConsulta.resultadoCierreActual === "CIERRE_AUTOMATICO"
+                                                            ? "dashboardWinetEtiqueta dashboardWinetEtiqueta--cierreAutomatico"
+                                                            : "dashboardWinetEtiqueta"
+                                                }
+                                            >
+                                                {otConsulta.resultadoCierreActual
+                                                    ? formatearEstadoVisible(
+                                                        otConsulta.resultadoCierreActual
+                                                    )
+                                                    : "—"}
+                                            </span>
+                                        </span>
+                                    </span>
+
+                                </div>
+
+                                <div
+                                    style={{
+                                        marginTop: "10px",
+                                        display: "grid",
+                                        gridTemplateColumns:
+                                            "repeat(2, minmax(220px, 1fr))",
+                                        gap: "8px"
+                                    }}
+                                >
+                                    <span>
+                                        Período:{" "}
+                                        <strong>
+                                            {otConsulta.primerInicio &&
+                                            otConsulta.ultimoFin
+                                                ? `${new Date(
+                                                    otConsulta.primerInicio
+                                                ).toLocaleDateString(
+                                                    "es-PE",
+                                                    {
+                                                        timeZone: "UTC"
+                                                    }
+                                                )} → ${new Date(
+                                                    otConsulta.ultimoFin
+                                                ).toLocaleDateString(
+                                                    "es-PE",
+                                                    {
+                                                        timeZone: "UTC"
+                                                    }
+                                                )}`
+                                                : "—"}
+                                        </strong>
+                                    </span>
+
+                                    <span>
+                                        Ciclos:{" "}
+                                        <strong>
+                                            {otConsulta.ciclos?.length || 0}
+                                        </strong>
+                                    </span>
+                                </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+
+                                    if (!otConsulta?.idOrden) {
+                                        return;
+                                    }
+
+                                    setOtSeleccionada(
+                                        otConsulta.idOrden
+                                    );
+
+                                    setTimeout(() => {
+
+                                        document
+                                            .querySelector(
+                                                ".dashboardWinetTrazabilidad"
+                                            )
+                                            ?.scrollIntoView({
+                                                behavior: "smooth",
+                                                block: "start"
+                                            });
+
+                                    }, 0);
+
+                                }}
+                                style={{
+                                    marginTop: "10px",
+                                    padding: "9px 14px",
+                                    border: "1px solid #2563eb",
+                                    borderRadius: "8px",
+                                    background: "#2563eb",
+                                    color: "#ffffff",
+                                    cursor: "pointer",
+                                    fontWeight: "600"
+                                }}
+                            >
+                                Ver trazabilidad →
+                            </button>    
+                            </div>
+                        )}
+
+                    </section>
+                {/* AHORA */}
+                <section className="dashboardAhora">
+
+                    <div className="dashboardAhoraEncabezado">
+                        <div>
+                            <span className="dashboardAhoraEtiqueta">
+                                AHORA
+                            </span>
+
+                            <p>
+                                Situación operativa actual de las actividades.
+                            </p>
+                        </div>
+
+                        {actividadesAhoraIniciadas.filter(
+                            (actividad) =>
+                                actividad.estadoTiempo ===
+                                "FUERA DE TIEMPO"
+                        ).length > 0 && (
+                            <div className="dashboardAhoraAlerta">
+                                {
+                                    actividadesAhoraIniciadas.filter(
+                                        (actividad) =>
+                                            actividad.estadoTiempo ===
+                                            "FUERA DE TIEMPO"
+                                    ).length
+                                }{" "}
+                                iniciadas fuera de tiempo
+                            </div>
                         )}
                     </div>
 
-                    <span className="dashboardCardDetalle">
-                        Promedio del tiempo registrado por OT finalizada
-                    </span>
-                </article>
+                    <div className="dashboardAhoraItems">
+
+                        <article
+                            className={`dashboardAhoraItem dashboardAhoraItem--pendiente ${
+                                eventoOperativoSeleccionado === "PENDIENTES"
+                                    ? "dashboardAhoraItem--seleccionado"
+                                    : ""
+                            }`}
+                            onClick={() => {
+                                setEventoOperativoSeleccionado(
+                                    (actual) =>
+                                        actual === "PENDIENTES"
+                                            ? null
+                                            : "PENDIENTES"
+                                );
+                                setOtSeleccionada(null);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <span>Pendientes</span>
+                            <strong>
+                                {ahoraWinet.pendientes ?? 0}
+                            </strong>
+                        </article>
+
+                        <article
+                            className={`dashboardAhoraItem dashboardAhoraItem--ruta ${
+                                eventoOperativoSeleccionado === "EN_RUTA"
+                                    ? "dashboardAhoraItem--seleccionado"
+                                    : ""
+                            }`}
+                            onClick={() => {
+                                setEventoOperativoSeleccionado(
+                                    (actual) =>
+                                        actual === "EN_RUTA"
+                                            ? null
+                                            : "EN_RUTA"
+                                );
+                                setOtSeleccionada(null);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <span>En ruta</span>
+                            <strong>
+                                {ahoraWinet.enRuta ?? 0}
+                            </strong>
+                        </article>
+
+                        <article
+                            className={`dashboardAhoraItem dashboardAhoraItem--iniciada ${
+                                eventoOperativoSeleccionado === "INICIADAS"
+                                    ? "dashboardAhoraItem--seleccionado"
+                                    : ""
+                            }`}
+                            onClick={() => {
+                                setEventoOperativoSeleccionado(
+                                    (actual) =>
+                                        actual === "INICIADAS"
+                                            ? null
+                                            : "INICIADAS"
+                                );
+                                setOtSeleccionada(null);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <span>Iniciadas</span>
+                            <strong>
+                                {ahoraWinet.iniciadas ?? 0}
+                            </strong>
+                        </article>
+
+                    </div>
+
+                </section>
+
+                {/* 5 KPI PRINCIPALES */}
+                <div className="dashboardKPIPrincipales">
+
+                    <article className="dashboardKPIPrincipal">
+                        <span>
+                            Actividades válidas
+                        </span>
+
+                        <strong>
+                            {datosKPI.totalActividades ?? 0}
+                        </strong>
+
+                        <small>
+                            Finalizadas + no realizadas
+                        </small>
+                    </article>
+
+                    <article className="dashboardKPIPrincipal dashboardKPIPrincipal--finalizadas">
+                        <span>
+                            Finalizadas
+                        </span>
+
+                        <strong>
+                            {datosKPI.finalizadas ?? 0}
+                        </strong>
+
+                        <small>
+                            Actividades finalizadas
+                        </small>
+                    </article>
+
+                    <article className="dashboardKPIPrincipal dashboardKPIPrincipal--noRealizadas">
+                        <span>
+                            No realizadas
+                        </span>
+
+                        <strong>
+                            {datosKPI.noRealizados ?? 0}
+                        </strong>
+
+                        <small>
+                            Reprogramadas: {datosKPI.reprogramadas ?? 0}
+                            {" · "}
+                            Cierres automáticos: {datosKPI.cierresAutomaticos ?? 0}
+                        </small>
+                    </article>
+
+                    <article className="dashboardKPIPrincipal dashboardKPIPrincipal--efectividad">
+                        <span>
+                            Efectividad
+                        </span>
+
+                        <strong>
+                            {datosKPI.efectividad ?? 0}%
+                        </strong>
+
+                        <small>
+                            Finalizadas / actividades válidas
+                        </small>
+                    </article>
+
+                    <article className="dashboardKPIPrincipal">
+                        <span>
+                            Tiempo promedio por OT
+                        </span>
+
+                        <strong>
+                            {formatearDuracion(
+                                datosKPI.promedioDuracionMinutos
+                            )}
+                        </strong>
+
+                        <small>
+                            Promedio del tiempo registrado por OT finalizada
+                        </small>
+                    </article>
+
+                </div>
 
             </div>
+            {/* =====================================
+                ACTIVIDADES POR DÍA
+            ===================================== */}
+
+            {historicoEfectividad.length > 0 && (
+                <section className="dashboardHistorico">
+
+                    <div className="dashboardHistoricoEncabezado">
+                        <div>
+                            <span className="dashboardHistoricoEtiqueta">
+                                EVOLUCIÓN DEL PERÍODO
+                            </span>
+
+                            <h3>
+                                Actividades por día
+                            </h3>
+
+                            <p>
+                                Finalizadas vs no realizadas según la fecha de actividad.
+                            </p>
+                        </div>
+
+                        <div className="dashboardHistoricoLeyenda">
+                            <span>
+                                <i className="dashboardHistoricoLeyendaFinalizada"></i>
+                                Finalizadas
+                            </span>
+
+                            <span>
+                                <i className="dashboardHistoricoLeyendaNoRealizada"></i>
+                                No realizadas
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="dashboardHistoricoContenedor">
+
+                        {(() => {
+
+                            const historicoOrdenado =
+                                [...historicoEfectividad].sort(
+                                    (a, b) =>
+                                        new Date(a.fecha).getTime() -
+                                        new Date(b.fecha).getTime()
+                                );
+
+                            const valorMaximo =
+                                Math.max(
+                                    ...historicoOrdenado.map(
+                                        (item) =>
+                                            Math.max(
+                                                Number(item.finalizadas || 0),
+                                                Number(item.noRealizados || 0)
+                                            )
+                                    ),
+                                    1
+                                );
+
+                            return (
+                                <div className="dashboardHistoricoGrafico">
+
+                                    {historicoOrdenado.map(
+                                        (item) => {
+
+                                            const finalizadas =
+                                                Number(
+                                                    item.finalizadas || 0
+                                                );
+
+                                            const noRealizadas =
+                                                Number(
+                                                    item.noRealizados || 0
+                                                );
+
+                                            const fecha =
+                                                new Date(item.fecha);
+
+                                            const etiquetaFecha =
+                                                !Number.isNaN(
+                                                    fecha.getTime()
+                                                )
+                                                    ? fecha.toLocaleDateString(
+                                                        "es-PE",
+                                                        {
+                                                            timeZone: "UTC",
+                                                            day: "2-digit",
+                                                            month: "2-digit"
+                                                        }
+                                                    )
+                                                    : "—";
+
+                                            const alturaFinalizadas =
+                                                Math.max(
+                                                    4,
+                                                    (finalizadas / valorMaximo) * 150
+                                                );
+
+                                            const alturaNoRealizadas =
+                                                Math.max(
+                                                    4,
+                                                    (noRealizadas / valorMaximo) * 150
+                                                );
+
+                                            return (
+                                                <div
+                                                    className="dashboardHistoricoDia"
+                                                    key={
+                                                        `${item.fecha}-${finalizadas}-${noRealizadas}`
+                                                    }
+                                                    title={
+                                                        `${etiquetaFecha}
+                                                    Finalizadas: ${finalizadas}
+                                                    No realizadas: ${noRealizadas}
+                                                    Reprogramadas: ${Number(item.reprogramadas || 0)}
+                                                    Cierres automáticos: ${Number(item.cierresAutomaticos || 0)}
+                                                    Efectividad: ${Number(item.efectividad || 0)}%`
+                                                    }
+                                                >
+
+                                                    <div className="dashboardHistoricoBarras">
+
+                                                        <div
+                                                            className="dashboardHistoricoBarra dashboardHistoricoBarra--finalizada"
+                                                            style={{
+                                                                height:
+                                                                    `${alturaFinalizadas}px`
+                                                            }}
+                                                        >
+                                                            <span>
+                                                                {finalizadas}
+                                                            </span>
+                                                        </div>
+
+                                                        <div
+                                                            className="dashboardHistoricoBarra dashboardHistoricoBarra--noRealizada"
+                                                            style={{
+                                                                height:
+                                                                    `${alturaNoRealizadas}px`
+                                                            }}
+                                                        >
+                                                            <span>
+                                                                {noRealizadas}
+                                                            </span>
+                                                        </div>
+
+                                                    </div>
+
+                                                    <span className="dashboardHistoricoFecha">
+                                                        {etiquetaFecha}
+                                                    </span>
+
+                                                </div>
+                                            );
+                                        }
+                                    )}
+
+                                </div>
+                            );
+                        })()}
+
+                    </div>
+
+                </section>
+            )}
+
             
             {/* =====================================
                 CONTROL OPERATIVO RED WINET
@@ -1170,124 +1923,6 @@ function DashboardCards({
                 </div>
 
                 <div className="dashboardCards dashboardCardsKPI">
-                
-
-                <article
-                    className={`dashboardCard dashboardCard--warning ${
-                        eventoOperativoSeleccionado === "PENDIENTES"
-                            ? "dashboardCard--seleccionada"
-                            : ""
-                    }`}
-                    onClick={() => {
-                        setEventoOperativoSeleccionado(
-                            (actual) =>
-                                actual === "PENDIENTES"
-                                    ? null
-                                    : "PENDIENTES"
-                        );
-                        setOtSeleccionada(null);
-                    }}
-                    style={{
-                        cursor: "pointer"
-                    }}
-                >
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Pendientes
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.pendientes ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Actividades pendientes de atención
-                    </span>
-                </article>
-
-                <article
-                    className={`dashboardCard dashboardCard--info ${
-                        eventoOperativoSeleccionado === "EN_RUTA"
-                            ? "dashboardCard--seleccionada"
-                            : ""
-                    }`}
-                    onClick={() => {
-                        setEventoOperativoSeleccionado(
-                            (actual) =>
-                                actual === "EN_RUTA"
-                                    ? null
-                                    : "EN_RUTA"
-                        );
-                        setOtSeleccionada(null);
-                    }}
-                    style={{
-                        cursor: "pointer"
-                    }}
-                >
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            En ruta
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.enRuta ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Actividades con desplazamiento en curso
-                    </span>
-                </article>
-
-                <article
-                    className={`dashboardCard dashboardCard--info ${
-                        eventoOperativoSeleccionado === "INICIADAS"
-                            ? "dashboardCard--seleccionada"
-                            : ""
-                    }`}
-                    onClick={() => {
-                        setEventoOperativoSeleccionado(
-                            (actual) =>
-                                actual === "INICIADAS"
-                                    ? null
-                                    : "INICIADAS"
-                        );
-                        setOtSeleccionada(null);
-                    }}
-                    style={{
-                        cursor: "pointer"
-                    }}
-                >
-                    <div className="dashboardCardCabecera">
-                        <span className="dashboardCardTitulo">
-                            Iniciadas
-                        </span>
-
-                        <span
-                            className="dashboardCardIndicador"
-                            aria-hidden="true"
-                        />
-                    </div>
-
-                    <div className="dashboardCardValor">
-                        {datosKPI.iniciadas ?? 0}
-                    </div>
-
-                    <span className="dashboardCardDetalle">
-                        Actividades en ejecución
-                    </span>
-                </article>
 
                 <article className="dashboardCard dashboardCard--neutral">
                     <div className="dashboardCardCabecera">
@@ -1589,7 +2224,7 @@ function DashboardCards({
                                             <th>SUPERVISOR</th>
                                             <th>FECHA</th>
                                             <th>ESTADO</th>
-                                            <th>INICIO</th>
+                                            <th>INICIO PROGRAMADO</th>
                                             <th>FIN</th>
                                             <th>DURACIÓN</th>
                                             <th>DISTRITO</th>
@@ -1626,25 +2261,30 @@ function DashboardCards({
                                                                 : undefined
                                                     }}
                                                 >
+
+                                                    {/* OT */}
                                                     <td>
                                                         {actividad.codigoOT ||
                                                             actividad.idOrden ||
                                                             "—"}
                                                     </td>
 
+                                                    {/* ET */}
                                                     <td>
                                                         {actividad.et || "—"}
                                                     </td>
 
+                                                    {/* CÉLULA */}
                                                     <td>
                                                         {actividad.celula || "—"}
                                                     </td>
 
+                                                    {/* SUPERVISOR */}
                                                     <td>
-                                                        {actividad.supervisor ||
-                                                            "—"}
+                                                        {actividad.supervisor || "—"}
                                                     </td>
 
+                                                    {/* FECHA */}
                                                     <td>
                                                         {actividad.fechaActividad
                                                             ? new Date(
@@ -1658,6 +2298,7 @@ function DashboardCards({
                                                             : "—"}
                                                     </td>
 
+                                                    {/* ESTADO */}
                                                     <td>
                                                         <span className="dashboardWinetEtiqueta dashboardWinetEtiqueta--enRuta">
                                                             {formatearEstadoVisible(
@@ -1666,6 +2307,7 @@ function DashboardCards({
                                                         </span>
                                                     </td>
 
+                                                    {/* INICIO PROGRAMADO */}
                                                     <td>
                                                         {actividad.horaInicio
                                                             ? new Date(
@@ -1681,30 +2323,19 @@ function DashboardCards({
                                                             : "—"}
                                                     </td>
 
+                                                    {/* FIN */}
                                                     <td>
-                                                        {actividad.horaFin
-                                                            ? new Date(
-                                                                actividad.horaFin
-                                                            ).toLocaleTimeString(
-                                                                "es-PE",
-                                                                {
-                                                                    timeZone: "UTC",
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit"
-                                                                }
-                                                            )
-                                                            : "—"}
                                                     </td>
 
+                                                    {/* DURACIÓN */}
                                                     <td>
-                                                        {formatearDuracion(
-                                                            actividad.duracionMinutos
-                                                        )}
                                                     </td>
 
+                                                    {/* DISTRITO */}
                                                     <td>
                                                         {actividad.distrito || "—"}
                                                     </td>
+
                                                 </tr>
                                             )
                                         )}
@@ -2466,17 +3097,44 @@ function DashboardCards({
                                                     </td>
 
                                                     <td>
-                                                        <span
-                                                            className={
-                                                                item.efectividad >= 80
-                                                                    ? "dashboardWinetEfectividad dashboardWinetEfectividadAlta"
-                                                                    : item.efectividad >= 50
-                                                                        ? "dashboardWinetEfectividad dashboardWinetEfectividadMedia"
-                                                                        : "dashboardWinetEfectividad dashboardWinetEfectividadBaja"
-                                                            }
-                                                        >
-                                                            {item.efectividad}%
-                                                        </span>
+                                                        <div className="dashboardCelulaEfectividad">
+
+                                                            <div className="dashboardCelulaEfectividadValor">
+                                                                <span
+                                                                    className={
+                                                                        item.efectividad >= 80
+                                                                            ? "dashboardWinetEfectividad dashboardWinetEfectividadAlta"
+                                                                            : item.efectividad >= 50
+                                                                                ? "dashboardWinetEfectividad dashboardWinetEfectividadMedia"
+                                                                                : "dashboardWinetEfectividad dashboardWinetEfectividadBaja"
+                                                                    }
+                                                                >
+                                                                    {item.efectividad}%
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="dashboardCelulaEfectividadBarra">
+                                                                <div
+                                                                    className={
+                                                                        item.efectividad >= 80
+                                                                            ? "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--alta"
+                                                                            : item.efectividad >= 50
+                                                                                ? "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--media"
+                                                                                : "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--baja"
+                                                                    }
+                                                                    style={{
+                                                                        width: `${Math.min(
+                                                                            100,
+                                                                            Math.max(
+                                                                                0,
+                                                                                Number(item.efectividad || 0)
+                                                                            )
+                                                                        )}%`
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                        </div>
                                                     </td>
                                                     <td>
                                                         {indicadores.finalizadasPorDia !== null
@@ -2644,7 +3302,44 @@ function DashboardCards({
 
                                 </div>
                         )}
+                    <div className="dashboardEspecialistaBusqueda">
 
+                        <div>
+                            <span className="dashboardEspecialistaBusquedaTitulo">
+                                Buscar especialista
+                            </span>
+
+                            <span className="dashboardEspecialistaBusquedaAyuda">
+                                Escribe el nombre del ET
+                            </span>
+                        </div>
+
+                        <div className="dashboardEspecialistaBusquedaControl">
+                            <input
+                                type="text"
+                                value={busquedaEspecialista}
+                                onChange={(evento) =>
+                                    setBusquedaEspecialista(
+                                        evento.target.value
+                                    )
+                                }
+                                placeholder="🔎 Buscar ET..."
+                                aria-label="Buscar especialista"
+                            />
+
+                            {busquedaEspecialista && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setBusquedaEspecialista("")
+                                    }
+                                >
+                                    Limpiar
+                                </button>
+                            )}
+                        </div>
+
+                    </div>
                     <details
                         key={etSeleccionado ?? "sin-et"}
                         open={etSeleccionado === null}
@@ -2665,17 +3360,17 @@ function DashboardCards({
                             {" · "}
                             {detalleWinetOrdenado.length} ET
                         </summary>
-                    {detalleWinet.length === 0 ? (
+                    {detalleWinetOrdenado.length === 0 ? (
                         <div className="dashboardWinetVacio">
-                            No hay actividades WINET para los filtros seleccionados.
+                            {busquedaEspecialista
+                                ? `No se encontró ningún especialista con "${busquedaEspecialista}".`
+                                : "No hay actividades WINET para los filtros seleccionados."}
                         </div>
                     ) : (
                         <div className="dashboardWinetTablaContenedor">
                             <table className="dashboardWinetTabla">
                                 <thead>
                                     <tr>
-                                        <th>CÉLULA</th>
-                                        <th>SUPERVISOR</th>
                                         <th>ET</th>
                                         <th
                                             onClick={() =>
@@ -2806,17 +3501,14 @@ function DashboardCards({
                                                     String(etSeleccionado) ===
                                                     String(item.idTecnico)
                                                         ? "#eef5ff"
+                                                        : undefined,
+                                                fontWeight:
+                                                    String(etSeleccionado) ===
+                                                    String(item.idTecnico)
+                                                        ? 600
                                                         : undefined
                                             }}
                                         >
-                                            <td>
-                                                {item.celula || "Sin célula"}
-                                            </td>
-
-                                            <td>
-                                                {item.supervisor || "Sin supervisor"}
-                                            </td>
-
                                             <td className="dashboardWinetET">
                                                 {item.et}
                                             </td>
@@ -2834,17 +3526,44 @@ function DashboardCards({
                                             </td>
 
                                             <td>
-                                                <span
-                                                    className={
-                                                        item.efectividad >= 80
-                                                            ? "dashboardWinetEfectividad dashboardWinetEfectividadAlta"
-                                                            : item.efectividad >= 50
-                                                                ? "dashboardWinetEfectividad dashboardWinetEfectividadMedia"
-                                                                : "dashboardWinetEfectividad dashboardWinetEfectividadBaja"
-                                                    }
-                                                >
-                                                    {item.efectividad}%
-                                                </span>
+                                                <div className="dashboardCelulaEfectividad">
+
+                                                    <div className="dashboardCelulaEfectividadValor">
+                                                        <span
+                                                            className={
+                                                                item.efectividad >= 80
+                                                                    ? "dashboardWinetEfectividad dashboardWinetEfectividadAlta"
+                                                                    : item.efectividad >= 50
+                                                                        ? "dashboardWinetEfectividad dashboardWinetEfectividadMedia"
+                                                                        : "dashboardWinetEfectividad dashboardWinetEfectividadBaja"
+                                                            }
+                                                        >
+                                                            {item.efectividad}%
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="dashboardCelulaEfectividadBarra">
+                                                        <div
+                                                            className={
+                                                                item.efectividad >= 80
+                                                                    ? "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--alta"
+                                                                    : item.efectividad >= 50
+                                                                        ? "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--media"
+                                                                        : "dashboardCelulaEfectividadProgreso dashboardCelulaEfectividadProgreso--baja"
+                                                            }
+                                                            style={{
+                                                                width: `${Math.min(
+                                                                    100,
+                                                                    Math.max(
+                                                                        0,
+                                                                        Number(item.efectividad || 0)
+                                                                    )
+                                                                )}%`
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                </div>
                                             </td>
 
                                             <td>
@@ -3678,36 +4397,31 @@ function DashboardCards({
             )}
 
         {etSeleccionado !== null && otSeleccionada === null && (
-            <div className="dashboardWinetActividades">
-                <div className="dashboardWinetResumenTitulo">
+            <details className="dashboardWinetActividades dashboardWinetActividadesColapsable">
+
+                <summary className="dashboardWinetActividadesResumen">
+
                     <span>
                         Actividades OFSC del especialista
                     </span>
 
                     {etDetalleSeleccionado?.et && (
-                        <span
-                            style={{
-                                marginLeft: "8px",
-                                fontSize: "12px",
-                                fontWeight: "600",
-                                color: "#64748b"
-                            }}
-                        >
+                        <span className="dashboardWinetActividadesET">
                             · {etDetalleSeleccionado.et}
                         </span>
                     )}
 
-                    <span
-                        style={{
-                            marginLeft: "8px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            color: "#64748b"
-                        }}
-                    >
+                    <span className="dashboardWinetActividadesCantidad">
                         · {actividadesETSeleccionado.length} actividades
                     </span>
-                </div>
+
+                    <span className="dashboardWinetActividadesAccion">
+                        Ver actividades
+                    </span>
+
+                </summary>
+
+                <div className="dashboardWinetActividadesContenido">
 
                 {actividadesETSeleccionado.length === 0 ? (
                     <div className="dashboardWinetVacio">
@@ -3888,7 +4602,8 @@ function DashboardCards({
                     </div>
                 )}
             </div>
-        )}       
+        </details>
+    )}    
 
             {/* =====================================
                 CONTROL DE IMPORTACIÓN OFSC

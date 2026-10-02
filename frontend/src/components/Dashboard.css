@@ -1073,3 +1073,1021 @@
     color: #1e293b;
     font-weight: 700;
 }
+
+/* =====================================================
+   NUEVO DASHBOARD - RESUMEN SUPERIOR
+===================================================== */
+
+.dashboardSuperior {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+
+/* =====================================================
+   ENCABEZADO SUPERIOR
+===================================================== */
+
+.dashboardSuperiorEncabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    padding: 18px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardSuperiorTitulo {
+    min-width: 0;
+}
+
+.dashboardSuperiorTitulo .dashboardEyebrow {
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.dashboardSuperiorTitulo h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.dashboardSuperiorTitulo p {
+    margin: 5px 0 0;
+    color: #64748b;
+    font-size: 12px;
+}
+
+
+/* =====================================================
+   FILTROS
+===================================================== */
+
+.dashboardKPIFiltros {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dashboardKPIFiltro {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dashboardKPIFiltro label {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.dashboardKPIFiltro input,
+.dashboardKPIFiltro select {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.dashboardKPIFiltro input {
+    width: 122px;
+}
+
+.dashboardKPIFiltro select {
+    width: 150px;
+    cursor: pointer;
+}
+
+.dashboardKPIFiltro input:hover,
+.dashboardKPIFiltro select:hover {
+    border-color: #94a3b8;
+}
+
+.dashboardKPIFiltro input:focus,
+.dashboardKPIFiltro select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.dashboardKPIFiltrosBoton {
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid #2563eb;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.dashboardKPIFiltrosBoton:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.dashboardKPIFiltrosBoton:disabled {
+    opacity: 0.65;
+    cursor: wait;
+    transform: none;
+}
+
+
+/* =====================================================
+   PERÍODO APLICADO
+===================================================== */
+
+.dashboardPeriodoAplicado {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid #dbeafe;
+    border-left: 3px solid #2563eb;
+    border-radius: 8px;
+    background: #f8fbff;
+    color: #475569;
+    font-size: 11px;
+}
+
+.dashboardPeriodoAplicado strong {
+    color: #1e3a8a;
+}
+
+
+/* =====================================================
+   AHORA
+===================================================== */
+
+.dashboardAhora {
+    padding: 16px 18px;
+    border: 1px solid #dbe4ee;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardAhoraEncabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.dashboardAhoraEtiqueta {
+    display: inline-flex;
+    align-items: center;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+
+.dashboardAhoraEtiqueta::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: #16a34a;
+    box-shadow: 0 0 0 4px #dcfce7;
+}
+
+.dashboardAhoraEncabezado p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.dashboardAhoraAlerta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 10px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dashboardAhoraItems {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboardAhoraItem {
+    position: relative;
+    padding: 13px 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.dashboardAhoraItem::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.dashboardAhoraItem span {
+    display: block;
+    margin-bottom: 6px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dashboardAhoraItem strong {
+    display: block;
+    color: #0f172a;
+    font-size: 27px;
+    line-height: 1;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboardAhoraItem--pendiente::before {
+    background: #d97706;
+}
+
+.dashboardAhoraItem--ruta::before {
+    background: #2563eb;
+}
+
+.dashboardAhoraItem--iniciada::before {
+    background: #1d4ed8;
+}
+
+.dashboardAhoraItem--seleccionado {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+    background: #eff6ff;
+}
+
+/* =====================================================
+   KPI PRINCIPALES
+===================================================== */
+
+.dashboardKPIPrincipales {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.dashboardKPIPrincipal {
+    min-width: 0;
+    padding: 15px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.035);
+}
+
+.dashboardKPIPrincipal span {
+    display: block;
+    min-height: 30px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dashboardKPIPrincipal strong {
+    display: block;
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 27px;
+    line-height: 1.1;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboardKPIPrincipal small {
+    display: block;
+    margin-top: 6px;
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.dashboardKPIPrincipal--finalizadas {
+    border-top: 3px solid #16a34a;
+}
+
+.dashboardKPIPrincipal--noRealizadas {
+    border-top: 3px solid #dc2626;
+}
+
+.dashboardKPIPrincipal--efectividad {
+    border-top: 3px solid #2563eb;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 1200px) {
+
+    .dashboardSuperiorEncabezado {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .dashboardKPIFiltros {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .dashboardKPIPrincipales {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+}
+
+@media (max-width: 800px) {
+
+    .dashboardSuperiorEncabezado {
+        padding: 16px;
+    }
+
+    .dashboardKPIFiltros {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .dashboardKPIFiltro input,
+    .dashboardKPIFiltro select,
+    .dashboardKPIFiltrosBoton {
+        width: 100%;
+    }
+
+    .dashboardAhoraItems {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboardKPIPrincipales {
+        grid-template-columns: 1fr 1fr;
+    }
+
+}
+
+@media (max-width: 520px) {
+
+    .dashboardKPIFiltros {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboardKPIPrincipales {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboardAhoraEncabezado {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+}
+
+/* =====================================================
+   HISTÓRICO DE ACTIVIDADES POR DÍA
+===================================================== */
+
+.dashboardHistorico {
+    padding: 18px 20px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardHistoricoEncabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.dashboardHistoricoEtiqueta {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.dashboardHistoricoEncabezado h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.dashboardHistoricoEncabezado p {
+    margin: 4px 0 0;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.dashboardHistoricoLeyenda {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #64748b;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.dashboardHistoricoLeyenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.dashboardHistoricoLeyenda i {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.dashboardHistoricoLeyendaFinalizada {
+    background: #2563eb;
+}
+
+.dashboardHistoricoLeyendaNoRealizada {
+    background: #f59e0b;
+}
+
+.dashboardHistoricoContenedor {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+}
+
+.dashboardHistoricoGrafico {
+    min-width: max-content;
+    min-height: 200px;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 8px 0;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.dashboardHistoricoDia {
+    flex: 0 0 52px;
+    min-width: 52px;
+    height: 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.dashboardHistoricoBarras {
+    width: 100%;
+    height: 160px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 4px;
+}
+
+.dashboardHistoricoBarra {
+    position: relative;
+    width: 18px;
+    min-height: 4px;
+    border-radius: 5px 5px 0 0;
+    transition: height 0.2s ease, opacity 0.2s ease;
+}
+
+.dashboardHistoricoBarra span {
+    position: absolute;
+    left: 50%;
+    top: -18px;
+    transform: translateX(-50%);
+    color: #475569;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.dashboardHistoricoBarra--finalizada {
+    background: #2563eb;
+}
+
+.dashboardHistoricoBarra--noRealizada {
+    background: #f59e0b;
+}
+
+.dashboardHistoricoBarra:hover {
+    opacity: 0.78;
+}
+
+.dashboardHistoricoFecha {
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 700px) {
+
+    .dashboardHistorico {
+        padding: 16px;
+    }
+
+    .dashboardHistoricoEncabezado {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .dashboardHistoricoLeyenda {
+        white-space: normal;
+    }
+
+}
+
+/* =====================================================
+   CONTROL OPERATIVO - EXCEPCIONES COMPACTAS
+===================================================== */
+
+.dashboardWinetControl {
+    margin-top: 4px;
+}
+
+.dashboardWinetControl .dashboardSeccionTitulo {
+    margin-bottom: 10px;
+}
+
+.dashboardWinetControl .dashboardSeccionTitulo h2 {
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.dashboardWinetControl .dashboardSeccionTitulo p {
+    font-size: 10px;
+}
+
+.dashboardWinetControl .dashboardCards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 0;
+}
+
+.dashboardWinetControl .dashboardCard {
+    min-height: 92px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.dashboardWinetControl .dashboardCardTitulo {
+    font-size: 10px;
+}
+
+.dashboardWinetControl .dashboardCardValor {
+    margin-top: 10px;
+    font-size: 23px;
+}
+
+.dashboardWinetControl .dashboardCardDetalle {
+    margin-top: 6px;
+    font-size: 9px;
+    line-height: 1.25;
+}
+
+.dashboardWinetControl .dashboardCardIndicador {
+    width: 6px;
+    height: 6px;
+}
+
+@media (max-width: 1100px) {
+    .dashboardWinetControl .dashboardCards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .dashboardWinetControl .dashboardCards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* =====================================================
+   EFECTIVIDAD VISUAL POR CÉLULA
+===================================================== */
+
+.dashboardCelulaEfectividad {
+    min-width: 130px;
+}
+
+.dashboardCelulaEfectividadValor {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.dashboardCelulaEfectividadBarra {
+    width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e2e8f0;
+}
+
+.dashboardCelulaEfectividadProgreso {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.dashboardCelulaEfectividadProgreso--alta {
+    background: #16a34a;
+}
+
+.dashboardCelulaEfectividadProgreso--media {
+    background: #f59e0b;
+}
+
+.dashboardCelulaEfectividadProgreso--baja {
+    background: #dc2626;
+}
+
+/* =====================================================
+   BÚSQUEDA DE ESPECIALISTA
+===================================================== */
+
+.dashboardEspecialistaBusqueda {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 10px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.dashboardEspecialistaBusquedaTitulo {
+    display: block;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.dashboardEspecialistaBusquedaAyuda {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+.dashboardEspecialistaBusquedaControl {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.dashboardEspecialistaBusquedaControl input {
+    width: 230px;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+}
+
+.dashboardEspecialistaBusquedaControl input::placeholder {
+    color: #94a3b8;
+}
+
+.dashboardEspecialistaBusquedaControl input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+.dashboardEspecialistaBusquedaControl button {
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dashboardEspecialistaBusquedaControl button:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+@media (max-width: 700px) {
+
+    .dashboardEspecialistaBusqueda {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .dashboardEspecialistaBusquedaControl {
+        width: 100%;
+    }
+
+    .dashboardEspecialistaBusquedaControl input {
+        width: 100%;
+    }
+
+}
+
+/* =====================================================
+   ACTIVIDADES OFSC DEL ESPECIALISTA - COLAPSABLE
+===================================================== */
+
+.dashboardWinetActividadesColapsable {
+    margin-top: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.dashboardWinetActividadesResumen {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 42px;
+    padding: 0 13px;
+    cursor: pointer;
+    list-style: none;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    background: #f8fafc;
+    user-select: none;
+}
+
+.dashboardWinetActividadesResumen::-webkit-details-marker {
+    display: none;
+}
+
+.dashboardWinetActividadesResumen::before {
+    content: "›";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.dashboardWinetActividadesColapsable[open]
+    .dashboardWinetActividadesResumen::before {
+    transform: rotate(90deg);
+}
+
+.dashboardWinetActividadesResumen:hover {
+    background: #f1f5f9;
+}
+
+.dashboardWinetActividadesET {
+    color: #64748b;
+    font-weight: 600;
+}
+
+.dashboardWinetActividadesCantidad {
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.dashboardWinetActividadesAccion {
+    margin-left: auto;
+    padding: 5px 9px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.dashboardWinetActividadesContenido {
+    padding: 8px 0 0;
+}
+
+.dashboardWinetActividadesColapsable[open]
+    .dashboardWinetActividadesAccion {
+    color: #2563eb;
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+/* =====================================
+   CONSULTA RÁPIDA DE OT
+===================================== */
+
+.dashboardWinetConsultaOT {
+    margin: 18px 0;
+    padding: 18px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardWinetConsultaOT .dashboardSeccionTitulo {
+    margin-bottom: 14px;
+}
+
+.dashboardWinetConsultaOT .dashboardSeccionTitulo h2 {
+    margin-bottom: 4px;
+}
+
+.dashboardWinetConsultaOT input {
+    background: #ffffff;
+}
+
+.dashboardWinetConsultaOT button {
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.dashboardWinetConsultaOT button:hover {
+    transform: translateY(-1px);
+}
+
+.dashboardWinetConsultaOT button:disabled {
+    opacity: 0.65;
+}
+
+/* =====================================
+   CONSULTA RÁPIDA DE OT — AJUSTE FINAL
+===================================== */
+
+.dashboardWinetConsultaOT {
+    margin: 14px 0;
+    padding: 16px 18px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardWinetConsultaOT .dashboardSeccionTitulo {
+    margin-bottom: 10px;
+}
+
+.dashboardWinetConsultaOT .dashboardSeccionTitulo h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboardWinetConsultaOT .dashboardSeccionTitulo p {
+    margin: 3px 0 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* Campo de búsqueda */
+
+.dashboardWinetConsultaOT input[type="text"] {
+    height: 38px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+    outline: none;
+}
+
+.dashboardWinetConsultaOT input[type="text"]:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+}
+
+/* Botones */
+
+.dashboardWinetConsultaOT button {
+    min-height: 38px;
+    border-radius: 8px !important;
+    font-size: 13px;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        background 0.15s ease;
+}
+
+.dashboardWinetConsultaOT button:hover {
+    transform: translateY(-1px);
+}
+
+.dashboardWinetConsultaOT button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Resultado encontrado */
+
+.dashboardWinetConsultaOT > div[style*="background: #f8fafc"] {
+    margin-top: 10px !important;
+    padding: 11px 13px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+}
+
+.dashboardWinetConsultaOT strong {
+    font-weight: 700;
+}
+
+/* Botón de trazabilidad */
+
+.dashboardWinetConsultaOT button[style*="background: #2563eb"] {
+    box-shadow: 0 2px 5px rgba(37, 99, 235, 0.18);
+}
+
+.dashboardWinetConsultaOT button[style*="background: #2563eb"]:hover {
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.22);
+}
+
+/* Ficha ejecutiva de OT encontrada */
+
+.dashboardWinetConsultaOT
+    > div[style*="background: #f8fafc"] {
+    border-left: 3px solid #2563eb !important;
+    background: #f8fafc !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.dashboardWinetConsultaOT
+    > div[style*="background: #f8fafc"]
+    > strong {
+    display: block;
+    font-size: 14px;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.dashboardWinetConsultaOT
+    > div[style*="background: #f8fafc"]
+    > div {
+    line-height: 1.5;
+}
+
+.dashboardWinetConsultaOT
+    > div[style*="background: #f8fafc"]
+    span {
+    color: #334155;
+}
